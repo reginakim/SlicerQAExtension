@@ -9,17 +9,12 @@ from __main__ import vtk
 
 class SlicerDerivedImageEval:
     def __init__(self, parent):
-        parent.title = "Scripted Loadable Extension Template"
-        parent.categories = ["Examples"]
+        parent.title = 'Image Evaluation'
+        parent.categories = ['Work in Progress']
         parent.dependencies = []
-        parent.contributors = ["Jean-Christophe Fillion-Robin (Kitware), \
-        Steve Pieper (Isomics)"] # replace with "Firstname Lastname (Org)"
-        parent.helpText = """Example of scripted loadable extension."""
-        parent.acknowledgementText = """
-        This file was originally developed by Jean-Christophe Fillion-Robin, \
-        Kitware Inc. and Steve Pieper, Isomics, Inc. and was partially funded \
-        by NIH grant 3P41RR013218-12S1.
-        """ # replace with organization, grant and thanks.
+        parent.contributors = ['Dave Welch (UIowa), Hans Johnson (UIowa)']
+        parent.helpText = """Image evaluation module for use in the UIowa PINC lab"""
+        parent.acknowledgementText = """ """
         self.parent = parent
 
 #
@@ -32,49 +27,106 @@ class SlicerDerivedImageEvalWidget:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
-        else:
-            self.parent = parent
-        self.layout = self.parent.layout()
-        if parent is None:
+            self.layout = self.parent.layout()
             self.setup()
             self.parent.show()
+        else:
+            self.parent = parent
+            self.layout = self.parent.layout()
+        self.logic = SlicerDerivedImageEvalLogic()
 
     def setup(self):
-        # Instantiate and connect widgets ...
-
-        # reload button
-        # (use this during development, but remove it when delivering
-        #    your module to users)
         ### START DEVELOPMENT TOOL ###
+        # Layout within the summary collapsible button
         self.reloadButton = qt.QPushButton("Reload")
         self.reloadButton.toolTip = "Reload this module."
         self.reloadButton.name = "SlicerDerivedImageEval Reload"
         self.layout.addWidget(self.reloadButton)
         self.reloadButton.connect('clicked()', self.onReload)
         ###        END TOOL        ###
+        # Evaluation subsection
+        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
+        self.evaluationCollapsibleButton.text = 'Evaluation input'
+        # Load UI file
+        uiloader = qt.QUiLoader()
+        qfile = qt.QFile('/Users/dmwelch/Development/src/extensions/SlicerDerivedImageEval/Resources/UI/evaluationPrototype2.ui')
+        qfile.open(qt.QFile.ReadOnly)
+        evalFrame = uiloader.load(qfile)
+        self.evaluationCollapsibleButton.setLayout(evalFrame.findChild('QVBoxLayout'))
+        self.layout.addWidget(self.evaluationCollapsibleButton)
+        qfile.close()
+        # Get buttons in UI file
+        self.buttons = {}
+        self.radios = {}
+        pushButtons = self.evaluationCollapsibleButton.findChildren('QPushButton')
+        for button in pushButtons:
+            self.buttons[button.objectName] = button
+        self.putamenLeft = self.buttons['putamenLeftButton']
+        print self.putamenLeft.objectName
+        print "*************"
+        radioButtons = self.evaluationCollapsibleButton.findChildren('QRadioButton')
+        for button in radioButtons:
+            self.radios[button.objectName] = button
+        self.putamenLeftGoodButton = self.radios['putamenLeftGoodButton']
+        self.putamenLeftBadButton = self.radios['putamenLeftBadButton']
+        print self.putamenLeftGoodButton.objectName
+        print self.putamenLeftBadButton.objectName
+        print "*************"
+        # SessionLayout
 
-        # Collapsible button
-        dummyCollapsibleButton = ctk.ctkCollapsibleButton()
-        dummyCollapsibleButton.text = "A collapsible button"
-        self.layout.addWidget(dummyCollapsibleButton)
+        # EvaluationLayout
 
-        # Layout within the dummy collapsible button
-        dummyFormLayout = qt.QFormLayout(dummyCollapsibleButton)
-
-        # HelloWorld button
-        helloWorldButton = qt.QPushButton("Hello world")
-        helloWorldButton.toolTip = "Print 'Hello world' in standard ouput."
-        dummyFormLayout.addWidget(helloWorldButton)
-        helloWorldButton.connect('clicked(bool)', self.onHelloWorldButtonClicked)
+        # self.evaluationLayout = qt.QFormLayout(evaluationCollapsibleButton)
+        # labelsLayout
+        # labelsLayout = qt.QHBoxLayout()
+        # regionLabel = qt.QLabel(); regionLabel.setText('Region')
+        # goodLabel = qt.QLabel(); goodLabel.setText('Good')
+        # badLabel = qt.QLabel(); badLabel.setText('Bad')
+        # labelsLayout.addWidget(goodLabel)
+        # labelsLayout.addWidget(badLabel)
+        # putamen buttons
+        # self.putamenLeft = qt.QPushButton()
+        # self.putamenLeft.setText('Putamen, Left')
+        # self.putamenLeftButtons = self.evaluationRadioButtonPair()
+        # self.evaluationLayout.addRow(regionLabel, labelsLayout)
+        # self.evaluationLayout.addRow(self.putamenLeft, self.putamenLeftButtons[0])
+        self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
 
         # Add vertical spacer
         self.layout.addStretch(1)
 
         # Set local var as instance attribute
-        self.helloWorldButton = helloWorldButton
+        # self.batchFilesButton = batchFilesButton
 
-    def onHelloWorldButtonClicked(self):
-        print "Hello World !"
+    # def evaluationRadioButtonPair(self):
+    #     # TODO: replace radio buttons with integers/slider???
+    #     noButton = qt.QRadioButton()
+    #     noButton.toolTip = 'Image is below standards'
+    #     yesButton = qt.QRadioButton()
+    #     yesButton.toolTip = 'Image is at or above standards'
+    #     radioLayout = qt.QHBoxLayout()
+    #     radioLayout.addWidget(yesButton)
+    #     radioLayout.addWidget(noButton)
+    #     return (radioLayout, yesButton, noButton)
+
+    def onBatchFilesButtonClicked(self):
+        fileList = self.logic.batchList
+
+
+    def onRegionButtonClicked(self):
+        if self.putamenLeft.text == 'Putamen, Left':
+            labelNode = slicer.util.getNode('L_Putamen')
+            compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
+            for compositeNode in compositeNodes.values():
+                compositeNode.SetLabelVolumeID(labelNode.GetID())
+                compositeNode.SetLabelOpacity(1.0)
+            sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
+            for sliceNode in sliceNodes.values():
+                sliceNode.UseLabelOutlineOn()
+            good = self.putamenLeftGoodButton
+            good.setEnabled(True)
+            bad = self.putamenLeftBadButton
+            bad.setEnabled(True)
 
     def onReload(self, moduleName="SlicerDerivedImageEval"):
         """ Generic development reload method for any scripted module.
@@ -84,10 +136,7 @@ class SlicerDerivedImageEvalWidget:
         import imp
         import os
         import sys
-
         import slicer
-
-
         widgetName = moduleName + "Widget"
         # reload the source code
         # - set source file path
@@ -112,3 +161,108 @@ class SlicerDerivedImageEvalWidget:
         globals()[widgetName.lower()] = eval('globals()["%s"].%s(parent)' %
                                              (moduleName, widgetName))
         globals()[widgetName.lower()].setup()
+
+
+class SlicerDerivedImageEvalLogic(object):
+    """ Logic class to be used 'under the hood' of the evaluator """
+    def __init__(self):
+        self.database = None
+        self.experiment = None
+        self.batchList = None
+        self.batchSize = 21
+        self.testingData()
+
+    def onGetBatchFilesClicked(self):
+        batchList = []
+        testDataDirectory = ['Testing','/Data/Experiment']
+        self._getLockedFileList(testDataDirectory)
+
+    def _getLockedFileList(self, lockedFileList=None):
+        """ If the testing mode is on, lockedFileList ~= None """
+        if lockedFileList is None:
+            import imp
+            try:
+                import sqlite3
+            except ImportError:
+                fp, pathname, description = imp.find_module('sqlite3')
+                try:
+                    return imp.load_module('sqlite3', fp, pathname, description)
+                finally:
+                    # Since we may exit via an exception, close fp explicitly.
+                    if fp:
+                        fp.close()
+            # Get file list from SQL and lock entries from others
+            pass
+        else:
+            # Testing is on
+            self.batchList = lockedFileList
+
+
+    def testingData(self):
+        """ Load some default data for development and viewing scenario for it.
+        """
+        import os
+        if not os.environ['USER'] == 'dmwelch':
+            return 0
+        # TODO: Make a better dialog box here
+        dataDialog = qt.QLabel(); dataDialog.setText('Loading files...'); dataDialog.show()
+        if not slicer.util.getNodes('T1_Average*'):
+            import os
+            fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t1_average_BRAINSABC.nii.gz'
+            # print "This is the T1 image: %s" % fileName
+            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T1_Average"})
+        if not slicer.util.getNodes('T2_Average*'):
+            import os
+            fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t2_average_BRAINSABC.nii.gz'
+            # print "This is the T2 image: %s" % fileName
+            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T2_Average"})
+        if not slicer.util.getNodes('BRAINS_label*'):
+            import os
+            fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/brain_label_seg.nii.gz'
+            # print "This is the label image: %s" % fileName
+            volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"BRAINS_label"})
+        if not slicer.util.getNodes('L_Putamen*'):
+            import os
+            fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/BRAINSCut/l_Putamen_seg.nii.gz'
+            # print "This is the l_p image: %s" % fileName
+            volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"L_Putamen"})
+        dataDialog.close()
+        # Get the image nodes
+        t1Average = slicer.util.getNode('T1_Average')
+        t2Average = slicer.util.getNode('T2_Average')
+        brainsLabel = slicer.util.getNode('BRAINS_label')
+        leftPutamen = slicer.util.getNode('L_Putamen')
+        # Set up template scene
+        compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
+        for compositeNode in compositeNodes.values():
+            compositeNode.SetBackgroundVolumeID(t1Average.GetID())
+            compositeNode.SetForegroundVolumeID(t2Average.GetID())
+            compositeNode.SetForegroundOpacity(0.0)
+        applicationLogic = slicer.app.applicationLogic()
+        applicationLogic.FitSliceToAll()
+
+
+class MRMLSceneTemplate(object):
+    """ Create a MRMLScene Template for each scan session """
+    def __init__(self):
+        self.template = None
+
+    def getTemplate(self, sessionDirectory):
+        pass
+
+    def _createMRMLSceneTemplate(self):
+        self.scene = slicer.vtkMRMLScene()
+        # TODO: Set/verify layout with LayoutManager
+        self.template.correctedT1 = slicer.vtkMRMLScalarVolumeNode()
+        self.template.correctedT2 = slicer.vtkMRMLScalarVolumeNode()
+        self.template.posterior.air = slicer.vtkMRMLScalarVolumeNode()
+        # self.template.posterior.bgm = slicer.vtkMRMLScalarVolumeNode()
+        # ...
+        self.scene.StartState(slicer.vtkMRMLScene().BatchProcessState)
+        self.scene.AddNodeNoModify(self.template.correctedT1)
+        self.scene.AddNodeNoModify(self.template.correctedT2)
+        self.scene.AddNodeNoModify(self.template.posterior.air)
+        # TODO: Remove old images
+        # TODO: Add nodes to slice views
+        # TODO: Set view characteristics of volumes in slice views
+        self.scene.EndState(slicer.vtkMRMLScene().BatchProcessState)
