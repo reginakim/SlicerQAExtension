@@ -1,7 +1,12 @@
+import os
 from __main__ import ctk
 from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
+
+if not '__file__' in locals():
+    __file__ = os.path.join(os.getcwd(), 'SlicerDerivedImageEval.py')
+    print "__file__ = %s" % __file__
 
 #
 # SlicerDerivedImageEval
@@ -61,6 +66,10 @@ class SlicerDerivedImageEvalWidget:
         for button in pushButtons:
             self.buttons[button.objectName] = button
         self.putamenLeft = self.buttons['putamenLeftButton']
+        self.nextButton = self.buttons['nextButton']
+        self.nextButton.connect('clicked()', self.logic.onNextButtonClicked)
+        self.previousButton = self.buttons['previousButton']
+        self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
         # Get radios in UI file
         self.radios = {}
         radioButtons = self.evaluationCollapsibleButton.findChildren('QRadioButton')
@@ -108,6 +117,10 @@ class SlicerDerivedImageEvalWidget:
         # reload the source code
         # - set source file path
         # - load the module to the global space
+        if not '__file__' in locals():
+            __file__ = os.path.join(os.getcwd(), 'SlicerDerivedImageEval.py')
+            print "__file__ (2) = %s" % __file__
+        # TODO: Find a method to get the __file__ for THIS script, NOT the factory generated one! (see Pieper's below)
         filePath = eval('slicer.modules.%s.path' % moduleName.lower())
         p = os.path.dirname(filePath)
         if not sys.path.__contains__(p):
@@ -138,12 +151,38 @@ class SlicerDerivedImageEvalLogic(object):
         self.batchList = None
         self.batchSize = 21
         self.testingData()
+        self.onGetBatchFilesClicked() # TESTING
+        self.count = 0
 
     def onGetBatchFilesClicked(self):
+        import os
+        # TODO: import sqlite3
         batchList = []
         if True:  # Testing is on
-            testDataDirectory = ['Testing/Data/Experiment']
-            batchList = sessionList
+            batchFile = '/Users/dmwelch/Development/src/extensions/SlicerDerivedImageEval/Testing/database.csv'
+            t1AverageSuffix = '/TissueClassify/t1_average_BRAINSABC.nii.gz'
+            t2AverageSuffix = '/TissueClassify/t2_average_BRAINSABC.nii.gz'
+            leftPutamenSuffix = '/BRAINSCut/l_Putamen_seg.nii.gz'
+            fid = open(batchFile, 'r')
+            try:
+                entries = fid.readlines()
+            except:
+                raise
+            finally:
+                fid.close()
+            batchList = []
+            count = 0
+            for entry in entries:
+                base, subject, session = entry.split(',')
+                batchList.append({})
+                # print count, base, subject, session
+                # print batchList
+                batchList[count]['subject'] = subject
+                batchList[count]['session'] = session
+                batchList[count]['T1'] = os.path.join(base, subject, session, t1AverageSuffix)
+                batchList[count]['T2'] = os.path.join(base, subject, session, t1AverageSuffix)
+                batchList[count]['leftPutamen'] = os.path.join(base, subject, session, leftPutamenSuffix)
+                count += 1
             self._getLockedFileList(batchList)
 
     def _getLockedFileList(self, lockedFileList=None):
@@ -166,8 +205,7 @@ class SlicerDerivedImageEvalLogic(object):
             # Testing is on
             self.batchList = lockedFileList
 
-
-    def testingData(self):
+    def testingData(self, batchDict=None):
         """ Load some default data for development and set up a viewing scenario for it.
         """
         import os
@@ -183,28 +221,34 @@ class SlicerDerivedImageEvalLogic(object):
         if not slicer.util.getNodes('T1_Average*'):
             import os
             fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t1_average_BRAINSABC.nii.gz'
-            # print "This is the T1 image: %s" % fileName
+            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T1_Average"})
+        elif not batchDict is None:
+            fileName = batchDict['T1']
             volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T1_Average"})
         if not slicer.util.getNodes('T2_Average*'):
             import os
             fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t2_average_BRAINSABC.nii.gz'
-            # print "This is the T2 image: %s" % fileName
             volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T2_Average"})
-        if not slicer.util.getNodes('BRAINS_label*'):
-            import os
-            fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/brain_label_seg.nii.gz'
-            # print "This is the label image: %s" % fileName
-            volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"BRAINS_label"})
+        elif not batchDict is None:
+            fileName = batchDict['T2']
+            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T2_Average"})
+        # if not slicer.util.getNodes('BRAINS_label*'):
+        #     import os
+        #     fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/brain_label_seg.nii.gz'
+        #     # print "This is the label image: %s" % fileName
+        #     volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"BRAINS_label"})
         if not slicer.util.getNodes('L_Putamen*'):
             import os
             fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/BRAINSCut/l_Putamen_seg.nii.gz'
-            # print "This is the l_p image: %s" % fileName
             volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"L_Putamen"})
+        elif not batchDict is None:
+            fileName = batchDict['leftPutamen']
+            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"L_Putamen"})
         dataDialog.close()
         # Get the image nodes
         t1Average = slicer.util.getNode('T1_Average')
         t2Average = slicer.util.getNode('T2_Average')
-        brainsLabel = slicer.util.getNode('BRAINS_label')
+        # brainsLabel = slicer.util.getNode('BRAINS_label')
         leftPutamen = slicer.util.getNode('L_Putamen')
         # Set up template scene
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
@@ -215,6 +259,23 @@ class SlicerDerivedImageEvalLogic(object):
         applicationLogic = slicer.app.applicationLogic()
         applicationLogic.FitSliceToAll()
 
+    def onNextButtonClicked(self):
+        count = self.count + 1
+        if count > self.batchSize:
+            self.count = count
+        else:
+            self.count = 0
+        self.currentSession = self.batchFileList[count]['session']
+        self.testingData(self.batchFileList[count]) # BUG: Reloads files when flipping over to zero
+
+    def onPreviousButtonClicked(self):
+        count = self.count - 1
+        if count < 0:
+            self.count = count
+        else:
+            self.count = self.batchSize
+        self.currentSession = self.batchFileList[count]['session']
+        self.testingData(self.batchFileList[count]) # BUG: Reloads files when flipping over to zero
 
 class MRMLSceneTemplate(object):
     """ Create a MRMLScene Template for each scan session """
