@@ -49,47 +49,25 @@ class SlicerDerivedImageEvalWidget:
         self.evaluationCollapsibleButton.text = 'Evaluation input'
         # Load UI file
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile('/Users/dmwelch/Development/src/extensions/SlicerDerivedImageEval/Resources/UI/evaluationPrototype2.ui')
+        qfile = qt.QFile('/Users/dmwelch/Development/src/extensions/SlicerDerivedImageEval/Resources/UI/evaluationPrototype.ui')
         qfile.open(qt.QFile.ReadOnly)
         evalFrame = uiloader.load(qfile)
+        qfile.close()
         self.evaluationCollapsibleButton.setLayout(evalFrame.findChild('QVBoxLayout'))
         self.layout.addWidget(self.evaluationCollapsibleButton)
-        qfile.close()
         # Get buttons in UI file
         self.buttons = {}
-        self.radios = {}
         pushButtons = self.evaluationCollapsibleButton.findChildren('QPushButton')
         for button in pushButtons:
             self.buttons[button.objectName] = button
         self.putamenLeft = self.buttons['putamenLeftButton']
-        print self.putamenLeft.objectName
-        print "*************"
+        # Get radios in UI file
+        self.radios = {}
         radioButtons = self.evaluationCollapsibleButton.findChildren('QRadioButton')
         for button in radioButtons:
             self.radios[button.objectName] = button
         self.putamenLeftGoodButton = self.radios['putamenLeftGoodButton']
         self.putamenLeftBadButton = self.radios['putamenLeftBadButton']
-        print self.putamenLeftGoodButton.objectName
-        print self.putamenLeftBadButton.objectName
-        print "*************"
-        # SessionLayout
-
-        # EvaluationLayout
-
-        # self.evaluationLayout = qt.QFormLayout(evaluationCollapsibleButton)
-        # labelsLayout
-        # labelsLayout = qt.QHBoxLayout()
-        # regionLabel = qt.QLabel(); regionLabel.setText('Region')
-        # goodLabel = qt.QLabel(); goodLabel.setText('Good')
-        # badLabel = qt.QLabel(); badLabel.setText('Bad')
-        # labelsLayout.addWidget(goodLabel)
-        # labelsLayout.addWidget(badLabel)
-        # putamen buttons
-        # self.putamenLeft = qt.QPushButton()
-        # self.putamenLeft.setText('Putamen, Left')
-        # self.putamenLeftButtons = self.evaluationRadioButtonPair()
-        # self.evaluationLayout.addRow(regionLabel, labelsLayout)
-        # self.evaluationLayout.addRow(self.putamenLeft, self.putamenLeftButtons[0])
         self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
 
         # Add vertical spacer
@@ -97,17 +75,6 @@ class SlicerDerivedImageEvalWidget:
 
         # Set local var as instance attribute
         # self.batchFilesButton = batchFilesButton
-
-    # def evaluationRadioButtonPair(self):
-    #     # TODO: replace radio buttons with integers/slider???
-    #     noButton = qt.QRadioButton()
-    #     noButton.toolTip = 'Image is below standards'
-    #     yesButton = qt.QRadioButton()
-    #     yesButton.toolTip = 'Image is at or above standards'
-    #     radioLayout = qt.QHBoxLayout()
-    #     radioLayout.addWidget(yesButton)
-    #     radioLayout.addWidget(noButton)
-    #     return (radioLayout, yesButton, noButton)
 
     def onBatchFilesButtonClicked(self):
         fileList = self.logic.batchList
@@ -174,8 +141,10 @@ class SlicerDerivedImageEvalLogic(object):
 
     def onGetBatchFilesClicked(self):
         batchList = []
-        testDataDirectory = ['Testing','/Data/Experiment']
-        self._getLockedFileList(testDataDirectory)
+        if True:  # Testing is on
+            testDataDirectory = ['Testing/Data/Experiment']
+            batchList = sessionList
+            self._getLockedFileList(batchList)
 
     def _getLockedFileList(self, lockedFileList=None):
         """ If the testing mode is on, lockedFileList ~= None """
@@ -199,13 +168,18 @@ class SlicerDerivedImageEvalLogic(object):
 
 
     def testingData(self):
-        """ Load some default data for development and viewing scenario for it.
+        """ Load some default data for development and set up a viewing scenario for it.
         """
         import os
         if not os.environ['USER'] == 'dmwelch':
             return 0
         # TODO: Make a better dialog box here
-        dataDialog = qt.QLabel(); dataDialog.setText('Loading files...'); dataDialog.show()
+        dialogFrame = qt.QFrame()
+        dialogLayout = qt.QVBoxLayout()
+        dataDialog = qt.QLabel();
+        dataDialog.setText('Loading files...');
+        dataDialog.setLayout(dialogLayout)
+        dataDialog.show()
         if not slicer.util.getNodes('T1_Average*'):
             import os
             fileName = os.environ['HOME'] + '/Development/src/extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t1_average_BRAINSABC.nii.gz'

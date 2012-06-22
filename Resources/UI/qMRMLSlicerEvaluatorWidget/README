@@ -1,0 +1,15 @@
+*** The name of the custom widgets must follow the pattern: qMRML[customName][baseQtWidget], where [baseQtWidget] is the name of the qt widget your custom widget inherits from (i.e. ComboBox, Slider, Dialog, Widget...), and [customName] is a descriptive name. ***
+
+=== Steps to adding a custom widget to Qt Designer ===
+
+1) Modify the file Libs/qMRMLWidgets/Plugins/CMakeLists.txt:
+     a) Add these files to the variable qMRMLWidgetsPlugin_SRCS (in alphabetical order):
+         qMRMLSlicerEvaluatorWidget.h
+         qMRMLSlicerEvaluatorWidget.cxx
+     a) Add this file to the variable qMRMLWidgetsPlugin_MOC_SRCS (in alphabetical order):
+         qMRMLSlicerEvaluatorWidget.h
+
+2) Modify the file Libs/qMRMLWidgets/Plugins/qMRMLWidgetsPlugins.h:
+     a) Add your widget in the method qMRMLWidgetsPlugins::customWidgets()
+
+3) Compile
