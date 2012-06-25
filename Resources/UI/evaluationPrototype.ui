@@ -72,7 +72,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../Icons/previousIcon.png</normaloff>../Icons/previousIcon.png</iconset>
+         <normaloff>../Icons/previousIconSmall.png</normaloff>../Icons/previousIconSmall.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -196,7 +196,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../Icons/nextIcon.png</normaloff>../Icons/nextIcon.png</iconset>
+         <normaloff>../Icons/nextIconSmall.png</normaloff>../Icons/nextIconSmall.png</iconset>
        </property>
        <property name="iconSize">
         <size>
