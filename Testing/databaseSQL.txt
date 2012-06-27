@@ -1,0 +1,41 @@
+CREATE TABLE session
+    (id INT(9) NOT NULL,
+     project VARCHAR(30) NOT NULL,
+     subject CHAR(4) NOT NULL,
+     session CHAR(5) NOT NULL,
+     experiment VARCHAR(100) NOT NULL,
+     status VARCHAR(12) NOT NULL DEFAULT 'needs review',
+     caudateRight INT,
+     caudateLeft INT,
+     hippocampusRight INT,
+     hippocampusLeft INT,
+     putamenRight INT,
+     putamenLeft INT,
+     thalamusRight INT,
+     thalamusLeft INT,
+     PRIMARY KEY (id)
+     );
+
+INSERT INTO session VALUES (1,
+                            'FMRI_HD_024',
+                            '0135',
+                            '67396',
+                            'B4AUTO.20120524_Results');
+
+INSERT INTO session VALUES (2,
+                            'FMRI_HD_024',
+                            '0137',
+                            '48954',
+                            'B4AUTO.20120524_Results');
+
+INSERT INTO session VALUES (3,
+                            'FMRI_HD_024',
+                            '0137',
+                            '80457',
+                            'B4AUTO.20120524_Results');
+
+INSERT INTO session VALUES (4,
+                            'FMRI_HD_024',
+                            '0137',
+                            '87099',
+                            'B4AUTO.20120524_Results');

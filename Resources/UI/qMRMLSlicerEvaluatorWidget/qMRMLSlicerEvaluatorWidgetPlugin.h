@@ -9,6 +9,11 @@ class QMRML_WIDGETS_PLUGIN_EXPORT qMRMLSlicerEvaluatorWidgetPlugin : public QObj
                                 public qMRMLWidgetsAbstractPlugin
 {
   Q_OBJECT
+  Q_PROPERTY(buttonSelect button_selected
+             READ isButtonSelected
+             WRITE selectButton
+             RESET resetButton)
+  Q_BOOL(buttonSelected)
 
 public:
   qMRMLSlicerEvaluatorWidgetPlugin(QObject *_parent = 0);
@@ -18,6 +23,10 @@ public:
   QString includeFile() const;
   bool isContainer() const;
   QString name() const;
+
+  bool buttonSelect() const;
+  void selectButton(buttonSelect button_selected);
+  buttonSelect isButtonSelected() const;
 
 };
 

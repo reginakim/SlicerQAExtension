@@ -4,10 +4,10 @@ cmake_minimum_required(VERSION 2.8.7)
 if(NOT Slicer_SOURCE_DIR)
   set(EXTENSION_NAME SlicerDerivedImageEval)
   set(EXTENSION_HOMEPAGE "http://www.slicer.org/slicerWiki/index.php/Documentation/4.1/Extensions/SlicerDerivedImageEval")
-  set(EXTENSION_CATEGORY "Examples")
+  set(EXTENSION_CATEGORY "Work in Progress")
   set(EXTENSION_STATUS "Beta")
-  set(EXTENSION_CONTRIBUTORS "Jean-Christophe Fillion-Robin (Kitware)")
-  set(EXTENSION_DESCRIPTION "This is an example of extension bundling a scripted loadable module")
+  set(EXTENSION_CONTRIBUTORS "Dave Welch (UIowa), Hans Johnson (UIowa)")
+  set(EXTENSION_DESCRIPTION "A Slicer-based evaluation module for BRAINS AutoWorkup results")
   set(EXTENSION_ICONURL "http://viewvc.slicer.org/viewvc.cgi/Slicer4/trunk/Extensions/Testing/SlicerDerivedImageEval/Resources/Icons/SlicerDerivedImageEval.png?revision=19437&view=co")
   set(EXTENSION_SCREENSHOTURLS "http://wiki.slicer.org/slicerWiki/images/e/e2/Slicer-r19441-SlicerDerivedImageEval-screenshot.png")
 endif()
@@ -27,6 +27,7 @@ set(MODULE_PYTHON_SCRIPTS
   )
 
 set(MODULE_PYTHON_RESOURCES
+  database.csv
   )
 
 #-----------------------------------------------------------------------------

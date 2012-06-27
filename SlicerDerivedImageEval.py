@@ -1,12 +1,15 @@
+#! /usr/bin/env python
+
 import os
+import sqlite3
 from __main__ import ctk
 from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
-if not '__file__' in locals():
-    __file__ = os.path.join(os.getcwd(), 'SlicerDerivedImageEval.py')
-    print "__file__ = %s" % __file__
+import module_locator
+
+globals()['__file__'] = module_locator.module_path()
 
 #
 # SlicerDerivedImageEval
@@ -38,6 +41,7 @@ class SlicerDerivedImageEvalWidget:
         else:
             self.parent = parent
             self.layout = self.parent.layout()
+        self.currentSession = None
         self.logic = SlicerDerivedImageEvalLogic()
 
     def setup(self):
@@ -49,15 +53,15 @@ class SlicerDerivedImageEvalWidget:
         self.layout.addWidget(self.reloadButton)
         self.reloadButton.connect('clicked()', self.onReload)
         ###        END TOOL        ###
-        # Evaluation subsection
-        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
-        self.evaluationCollapsibleButton.text = 'Evaluation input'
         # Load UI file
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile('/scratch/welchdm/src/Slicer-extensions/SlicerDerivedImageEval/Resources/UI/evaluationPrototype.ui')
+        qfile = qt.QFile(os.path.join(__file__, 'Resources/UI/evaluationPrototype.ui'))
         qfile.open(qt.QFile.ReadOnly)
         evalFrame = uiloader.load(qfile)
         qfile.close()
+        # Evaluation subsection
+        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
+        self.evaluationCollapsibleButton.text = 'Evaluation input'
         self.evaluationCollapsibleButton.setLayout(evalFrame.findChild('QVBoxLayout'))
         self.layout.addWidget(self.evaluationCollapsibleButton)
         # Get buttons in UI file
@@ -65,15 +69,12 @@ class SlicerDerivedImageEvalWidget:
         pushButtons = self.evaluationCollapsibleButton.findChildren('QPushButton')
         for button in pushButtons:
             self.buttons[button.objectName] = button
-        print "Buttons: "
-        print self.buttons.keys()
-        # self.putamenLeft = self.buttons['putamenLeftButton']
+        self.putamenLeft = self.buttons['putamenLeftPushButton']
+        self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
         self.nextButton = self.buttons['nextButton']
-        self.nextButton.connect('clicked()', self.logic.onNextButtonClicked)
-        self.nextButton.connect('clicked()', self.onSessionModify)
+        self.nextButton.connect('clicked()', self.onNextButtonClicked)
         self.previousButton = self.buttons['previousButton']
-        self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
-        self.previousButton.connect('clicked()', self.onSessionModify)
+        self.previousButton.connect('clicked()', self.onPreviousButtonClicked)
         # Get session label button
         self.sessionLabel = None
         labels = self.evaluationCollapsibleButton.findChildren('QLabel')
@@ -81,35 +82,25 @@ class SlicerDerivedImageEvalWidget:
             if label.text == '####':
                 self.sessionLabel = label
                 break
-        print label.text
         # Get radios in UI file
-        # self.radios = {}
-        # radioButtons = self.evaluationCollapsibleButton.findChildren('QRadioButton')
-        # for button in radioButtons:
-        #     self.radios[button.objectName] = button
-        # print "Radios: "
-        # print self.radios.keys()
-        # self.putamenLeftGoodButton = self.radios['putamenLeftGoodButton']
-        # self.putamenLeftBadButton = self.radios['putamenLeftBadButton']
-        # self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
+        self.radios = {}
+        radioButtons = self.evaluationCollapsibleButton.findChildren('QRadioButton')
+        for button in radioButtons:
+            button.setEnabled(False)
+            self.radios[button.objectName] = button
+        self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
         # Add vertical spacer
         self.layout.addStretch(1)
         # Set local var as instance attribute
         # self.batchFilesButton = batchFilesButton
-
-    def onSessionModify(self):
-        sessionNumber = self.logic.currentSession
-        self.sessionLabel.text = sessionNumber
-        self.sessionLabel.update()
 
     def onBatchFilesButtonClicked(self):
         print "Batch file button clicked..."
         fileList = self.logic.batchList
 
     def onRegionButtonClicked(self):
-        print "Region button clicked..."
-        if self.putamenLeft.text == 'Putamen, Left':
-            labelNode = slicer.util.getNode('L_Putamen')
+        if self.putamenLeft:
+            labelNode = slicer.util.getNode('L_Putamen_%s' % self.sessionLabel.text)
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
@@ -117,15 +108,41 @@ class SlicerDerivedImageEvalWidget:
             sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
             for sliceNode in sliceNodes.values():
                 sliceNode.UseLabelOutlineOn()
-            good = self.putamenLeftGoodButton
-            good.setEnabled(True)
-            bad = self.putamenLeftBadButton
-            bad.setEnabled(True)
+            self.radios['putamenLeftGoodButton'].setEnabled(True)
+            self.radios['putamenLeftBadButton'].setEnabled(True)
+
+    def onNextButtonClicked(self):
+        if self.writeReviewToDatabase():
+            self.currentSession = self.logic.onNextButtonClicked()
+            self.sessionLabel.text = self.currentSession
+            self.sessionLabel.update()
+
+    def onPreviousButtonClicked(self):
+        if self.writeReviewToDatabase():
+            self.currentSession = self.logic.onPreviousButtonClicked()
+            self.sessionLabel.text = self.currentSession
+            self.sessionLabel.update()
+
+    def writeReviewToDatabase(self):
+        keys = self.radios.keys()
+        keys.sort()
+        for key in keys:
+            goodKey = key.replace('Bad', 'Good'); keys.remove(goodKey)
+            badKey = key.replace('Good', 'Bad'); keys.remove(badKey)
+            if not (self.radios[goodKey].isChecked() or self.radios[badKey].isChecked()):
+                return False
+            else:
+                if self.radios[goodKey].isChecked():
+                    # Write out 'True' to correct column
+                    print "%s is True" % goodKey
+                else:
+                    print "%s is True" % badKey
+        return True
 
     def onReload(self, moduleName="SlicerDerivedImageEval"):
-        """ Generic development reload method for any scripted module.
+        """ ============ DEVELOPMENT TOOL =============
+            Generic development reload method for any scripted module.
             ModuleWizard will subsitute correct default moduleName.
-            DEVELOPMENT TOOL
         """
         import imp
         import os
@@ -168,9 +185,9 @@ class SlicerDerivedImageEvalLogic(object):
         self.experiment = None
         self.batchList = None
         self.batchSize = 5
-        self.testingData()
+        #  self.testingData()
         self.onGetBatchFilesClicked() # TESTING
-        self.count = 0
+        self.count = 0 # Starting value
 
     def onGetBatchFilesClicked(self):
         import os
@@ -201,7 +218,6 @@ class SlicerDerivedImageEvalLogic(object):
                 batchList[count]['leftPutamen'] = testDir + os.path.join(base, subject, session, leftPutamenSuffix)
                 count += 1
             self._getLockedFileList(batchList)
-            # self._setDisplayedSession(batchList[0]['session'])
 
     def _getLockedFileList(self, lockedFileList=None):
         """ If the testing mode is on, lockedFileList ~= None """
@@ -223,7 +239,7 @@ class SlicerDerivedImageEvalLogic(object):
             # Testing is on
             self.batchList = lockedFileList
 
-    def testingData(self, batchDict=None):
+    def testingData(self, batchDict):
         """ Load some default data for development and set up a viewing scenario for it.
         """
         import os
@@ -233,54 +249,37 @@ class SlicerDerivedImageEvalLogic(object):
         # dialogFrame = qt.QFrame()
         # dialogLayout = qt.QVBoxLayout()
         dataDialog = qt.QPushButton();
-        dataDialog.setText('Loading files...');
+        dataDialog.setText('Loading files for session %s...' % batchDict['session']);
         # dataDialog.setLayout(dialogLayout)
         dataDialog.show()
-        if not slicer.util.getNodes('T1_Average*'):
-            import os
-            fileName = '/scratch/welchdm/src/Slicer-extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t1_average_BRAINSABC.nii.gz'
-            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T1_Average"})
-        elif batchDict:
-            fileName = batchDict['T1']
-            print "Loading file: %s" % fileName
-            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T1_Average"})
-        if not slicer.util.getNodes('T2_Average*'):
-            import os
-            fileName = '/scratch/welchdm/src/Slicer-extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/t2_average_BRAINSABC.nii.gz'
-            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T2_Average"})
-        elif batchDict:
-            fileName = batchDict['T2']
-            volumeNode = slicer.util.loadVolume(fileName, properties={'name':"T2_Average"})
-        # if not slicer.util.getNodes('BRAINS_label*'):
-        #     import os
-        #     fileName = '/scratch/welchdm/src/Slicer-extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/TissueClassify/brain_label_seg.nii.gz'
-        #     # print "This is the label image: %s" % fileName
-        #     volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':"BRAINS_label"})
-        if not slicer.util.getNodes('L_Putamen*'):
-            import os
-            fileName = '/scratch/welchdm/src/Slicer-extensions/SlicerDerivedImageEval/Testing/Data/Experiment/0131/89205/BRAINSCut/l_Putamen_seg.nii.gz'
-            volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':'L_Putamen'})
-        elif batchDict:
-            fileName = batchDict['leftPutamen']
-            volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':'L_Putamen'}) #name})
-            # TODO: fix reloading session bug
-            # session = batchDict['session']
-            # name = 'L_Putamen' + '_' + session
-            # volumeNode = slicer.util.loadLabelVolume(fileName, properties={'name':name})
+        if slicer.util.getNode('T1_Average_%s' % batchDict['session']) is None:
+            print 'T1_Average_%s' % batchDict['session']
+            print '====== is here -------'
+            print batchDict['T1']
+            volumeNode = slicer.util.loadVolume(batchDict['T1'], properties={'name':"T1_Average_%s" % batchDict['session']})
+        if slicer.util.getNode('T2_Average_%s' % batchDict['session']) is None:
+            volumeNode = slicer.util.loadVolume(batchDict['T2'], properties={'name':"T2_Average_%s" % batchDict['session']})
+        if slicer.util.getNode('L_Putamen_%s' % batchDict['session']) is None:
+            volumeNode = slicer.util.loadLabelVolume(batchDict['leftPutamen'],
+                                                     properties={'name':'L_Putamen_%s' % batchDict['session']})
         dataDialog.close()
         # Get the image nodes
-        t1Average = slicer.util.getNode('T1_Average')
-        t2Average = slicer.util.getNode('T2_Average')
-        leftPutamen = slicer.util.getNode('L_Putamen')
+        t1Average = slicer.util.getNode('T1_Average_%s' % batchDict['session'])
+        t2Average = slicer.util.getNode('T2_Average_%s' % batchDict['session'])
+        leftPutamen = slicer.util.getNode('L_Putamen_%s' % batchDict['session'])
         # brainsLabel = slicer.util.getNode('BRAINS_label')
         # Set up template scene
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
         for compositeNode in compositeNodes.values():
-            compositeNode.SetBackgroundVolumeID(t1Average.GetID())
-            compositeNode.SetForegroundVolumeID(t2Average.GetID())
-            compositeNode.SetForegroundOpacity(0.0)
+            try:
+                compositeNode.SetBackgroundVolumeID(t1Average.GetID())
+                compositeNode.SetForegroundVolumeID(t2Average.GetID())
+                compositeNode.SetForegroundOpacity(0.0)
+            except AttributeError:
+                raise IOError("Could not find files/nodes for session %s" % batchDict['session'])
         applicationLogic = slicer.app.applicationLogic()
         applicationLogic.FitSliceToAll()
+        return batchDict['session']
 
     def onNextButtonClicked(self):
         print "Next button clicked..."
@@ -289,8 +288,7 @@ class SlicerDerivedImageEvalLogic(object):
             self.count = count
         else:
             self.count = 0
-        self.currentSession = self.batchList[self.count]['session']
-        self.testingData(self.batchList[self.count]) # BUG: Reloads files when flipping over to zero
+        self.currentSession = self.testingData(self.batchList[self.count])
 
     def onPreviousButtonClicked(self):
         print "Previous button clicked..."
@@ -299,8 +297,7 @@ class SlicerDerivedImageEvalLogic(object):
             self.count = count
         else:
             self.count = self.batchSize
-        self.currentSession = self.batchList[self.count]['session']
-        self.testingData(self.batchList[self.count]) # BUG: Reloads files when flipping over to zero
+        self.currentSession = self.testingData(self.batchList[self.count])
 
 class MRMLSceneTemplate(object):
     """ Create a MRMLScene Template for each scan session """

@@ -2,6 +2,8 @@
 
 #include "qMRMLSlicerEvaluatorWidgetPlugin.h"
 #include "qMRMLSlicerEvaluatorWidget.h"
+#include <iostream>
+#include <fstream>
 
 //------------------------------------------------------------------------------
 qMRMLSlicerEvaluatorWidgetPlugin::qMRMLSlicerEvaluatorWidgetPlugin(QObject *_parent)
@@ -22,9 +24,23 @@ QString qMRMLSlicerEvaluatorWidgetPlugin::domXml() const
 {
   // You can customize how the widget is instantiated in Designer here
   // Read in domxml file here and return the string...
-  return "<widget class=\"qMRMLSlicerEvaluatorWidget\" \
+  /*return "<widget class=\"qMRMLSlicerEvaluatorWidget\"    \
           name=\"MRMLSlicerEvaluatorWidget\">\n"
           "</widget>\n";
+  */
+  ifstream inputUI ("qMRMLSlicerEvaluatorWidget.ui", ifstream::out);
+  inputUI.seekg (0, ios::end);
+  length = inputUI.tellg();
+  inputUI.seekg (0, ios::beg);
+
+  // allocate memory:
+  buffer = new char [length];
+
+  // read data as a block:
+  inputUI.read (buffer,length);
+  inputUI.close();
+
+  return buffer;
 }
 
 //------------------------------------------------------------------------------
