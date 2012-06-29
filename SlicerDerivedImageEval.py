@@ -8,6 +8,7 @@ from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
+# import database_helper
 
 globals()['__file__'] = module_locator.module_path()
 
@@ -69,12 +70,13 @@ class SlicerDerivedImageEvalWidget:
         pushButtons = self.evaluationCollapsibleButton.findChildren('QPushButton')
         for button in pushButtons:
             self.buttons[button.objectName] = button
-        self.putamenLeft = self.buttons['putamenLeftPushButton']
-        self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
-        self.nextButton = self.buttons['nextButton']
-        self.nextButton.connect('clicked()', self.onNextButtonClicked)
-        self.previousButton = self.buttons['previousButton']
-        self.previousButton.connect('clicked()', self.onPreviousButtonClicked)
+            if button.objectName in ['caudateLeftPushButton', 'caudateRightPushButton',
+                                     'hippocampusLeftPushButton', 'hippocampusRightPushButton',
+                                     'putamenLeftPushButton', 'putamenRightPushButton',
+                                     'thalamusLeftPushButton', 'thalamusRightPushButton']:
+                self.buttons[button.objectName].connect('clicked()', self.onRegionButtonClicked)
+        self.buttons['nextButton'].connect('clicked()', self.onNextButtonClicked)
+        self.buttons['previousButton'].connect('clicked()', self.onPreviousButtonClicked)
         # Get session label button
         self.sessionLabel = None
         labels = self.evaluationCollapsibleButton.findChildren('QLabel')
@@ -88,7 +90,7 @@ class SlicerDerivedImageEvalWidget:
         for button in radioButtons:
             button.setEnabled(False)
             self.radios[button.objectName] = button
-        self.putamenLeft.connect('clicked()', self.onRegionButtonClicked)
+            self.radios[button.objectName].connect('clicked()', self.onRegionButtonClicked)
         # Add vertical spacer
         self.layout.addStretch(1)
         # Set local var as instance attribute
@@ -99,17 +101,26 @@ class SlicerDerivedImageEvalWidget:
         fileList = self.logic.batchList
 
     def onRegionButtonClicked(self):
-        if self.putamenLeft:
+        if self.buttons['putamenLeftPushButton'].isClicked():
             labelNode = slicer.util.getNode('L_Putamen_%s' % self.sessionLabel.text)
-            compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
-            for compositeNode in compositeNodes.values():
-                compositeNode.SetLabelVolumeID(labelNode.GetID())
-                compositeNode.SetLabelOpacity(1.0)
-            sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
-            for sliceNode in sliceNodes.values():
-                sliceNode.UseLabelOutlineOn()
             self.radios['putamenLeftGoodButton'].setEnabled(True)
             self.radios['putamenLeftBadButton'].setEnabled(True)
+        elif self.buttons['putamenRightPushButton'].isClicked():
+            labelNode = slicer.util.getNode('R_Putamen_%s' % self.sessionLabel.text)
+            self.radios['putamenRightGoodButton'].setEnabled(True)
+            self.radios['putamenRightBadButton'].setEnabled(True)
+        elif self.buttons['caudateRightPushButton'].isClicked():
+            labelNode = slicer.util.getNode('R_Caudate_%s' % self.sessionLabel.text)
+            self.radios['caudateRightGoodButton'].setEnabled(True)
+            self.radios['caudateRightBadButton'].setEnabled(True)
+        # Set the scene
+        compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
+        for compositeNode in compositeNodes.values():
+            compositeNode.SetLabelVolumeID(labelNode.GetID())
+            compositeNode.SetLabelOpacity(1.0)
+        sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
+        for sliceNode in sliceNodes.values():
+            sliceNode.UseLabelOutlineOn()
 
     def onNextButtonClicked(self):
         if self.writeReviewToDatabase():
@@ -181,10 +192,12 @@ class SlicerDerivedImageEvalWidget:
 class SlicerDerivedImageEvalLogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self):
+        self.testing = False
         self.database = None
         self.experiment = None
         self.batchList = None
         self.batchSize = 5
+        self.batchRows = None
         #  self.testingData()
         self.onGetBatchFilesClicked() # TESTING
         self.count = 0 # Starting value
@@ -193,9 +206,8 @@ class SlicerDerivedImageEvalLogic(object):
         import os
         # TODO: import sqlite3
         batchList = []
-        if True:  # Testing is on
-            testDir = '/scratch/welchdm/src/Slicer-extensions'
-            batchFile = testDir + '/SlicerDerivedImageEval/Testing/database.csv'
+        if self.testing:
+            batchFile = os.path.join(__file__, 'Testing', 'database.csv')
             t1AverageSuffix = 'TissueClassify/t1_average_BRAINSABC.nii.gz'
             t2AverageSuffix = 'TissueClassify/t2_average_BRAINSABC.nii.gz'
             leftPutamenSuffix = 'BRAINSCut/l_Putamen_seg.nii.gz'
@@ -213,28 +225,101 @@ class SlicerDerivedImageEvalLogic(object):
                 batchList.append({})
                 batchList[count]['subject'] = subject
                 batchList[count]['session'] = session
-                batchList[count]['T1'] = testDir + os.path.join(base, subject, session, t1AverageSuffix)
-                batchList[count]['T2'] = testDir + os.path.join(base, subject, session, t2AverageSuffix)
-                batchList[count]['leftPutamen'] = testDir + os.path.join(base, subject, session, leftPutamenSuffix)
+                batchList[count]['T1'] = __file__ + os.path.join(base, subject, session, t1AverageSuffix)
+                batchList[count]['T2'] = __file__ + os.path.join(base, subject, session, t2AverageSuffix)
+                batchList[count]['leftPutamen'] = __file__ + os.path.join(base, subject, session, leftPutamenSuffix)
                 count += 1
             self._getLockedFileList(batchList)
+        else:
+            self.database = os.path.join(__file__, 'Testing', 'sqlTest.db')
+            self._getLockedFileList()
+
+    #========= TODO: move the database code to a helper file =========
+    def openDatabase(self):
+        self.connection = sqlite3.connect(self.database, isolation_level="IMMEDIATE")
+        self.connection.row_factory = sqlite3.Row
+        self.cursor = self.connection.cursor()
+        self.cursor.arraysize = self.batchSize
+
+    def getBatchIDs(self):
+        # Get batch
+        self.cursor.execute("SELECT id \
+                            FROM derived_images \
+                            WHERE status = 'needs review'")
+        ids = self.cursor.fetchmany()
+        if not ids:
+            # TODO: This shouldn't be an exception - should halt gracefully
+            self.connection.close()
+            raise Exception("No rows were status == 'needs review' were found!")
+        return ids
+
+    def lockBatchRows(self, ids):
+        # Lock batch members
+        for ID in ids:
+            self.cursor.execute("UPDATE derived_images \
+                                 SET status='locked' \
+                                 WHERE record_id=?", ID)
+        self.cursor.connection.commit()
+
+    def readBatchInformation(self, ids):
+        batch = []
+        for ID in ids:
+            self.cursor.execute("SELECT id, analysis, project, subject, session \
+                                 FROM derived_images \
+                                 WHERE record_id=? AND status='locked'", ID)
+            batch.append(self.cursor.fetchone())
+        return batch
+
+    def lockAndReadRecords(self):
+        self.openDatabase()
+        try:
+            ids = self.getBatchIDs()
+            self.lockBatchRows(ids)
+            self.batchRows = self.readBatchInformation(ids)
+        except Exception, e:
+            raise e
+        finally:
+            self.connection.close()
+
+    def writeAndUnlockRecord(self, values, ID):
+        self.openDatabase()
+        try:
+            self.cursor.execute("UPDATE reviews \
+                                 SET caudateRight=?, caudateLeft=?, \
+                                 hippocampusRight=?, hippocampusLeft=?, \
+                                 putamenRight=?, putamenLeft=?, \
+                                 thalamusRight=?, thalamusLeft=? \
+                                 WHERE record_id=?", values + ID)
+            self.cursor.execute("UPDATE derived_images \
+                                 SET status='reviewed' \
+                                 WHERE record_id=? AND status='locked'", ID)
+            self.cursor.commit()
+        finally:
+            self.connection.close()
+    # ========= ========= ========= ========= ========= ========= =========
 
     def _getLockedFileList(self, lockedFileList=None):
         """ If the testing mode is on, lockedFileList ~= None """
         if lockedFileList is None:
-            import imp
-            try:
-                import sqlite3
-            except ImportError:
-                fp, pathname, description = imp.find_module('sqlite3')
-                try:
-                    return imp.load_module('sqlite3', fp, pathname, description)
-                finally:
-                    # Since we may exit via an exception, close fp explicitly.
-                    if fp:
-                        fp.close()
-            # Get file list from SQL and lock entries from others
-            pass
+            self.lockAndReadRecords()
+            for item in self.batchList:
+                batchDict = {}
+                batchDict['session'] = item['session']
+                batchDict['T1'] = os.path.join(item['location'], 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
+                batchDict['T2'] = os.path.join(item['location'], 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+                batchDict['rightAccumben'] = os.path.join(item['location'], 'BRAINSCut', 'r_Accumben_seg.nii.gz')
+                batchDict['leftAccumben'] = os.path.join(item['location'], 'BRAINSCut', 'l_Accumben_seg.nii.gz')
+                batchDict['rightCaudate'] = os.path.join(item['location'], 'BRAINSCut', 'r_Caudate_seg.nii.gz')
+                batchDict['leftCaudate'] = os.path.join(item['location'], 'BRAINSCut', 'l_Caudate_seg.nii.gz')
+                batchDict['rightGlobus'] = os.path.join(item['location'], 'BRAINSCut', 'r_Globus_seg.nii.gz')
+                batchDict['leftGlobus'] = os.path.join(item['location'], 'BRAINSCut', 'l_Globus_seg.nii.gz')
+                batchDict['rightHippocampus'] = os.path.join(item['location'], 'BRAINSCut', 'r_Hippocampus_seg.nii.gz')
+                batchDict['leftHippocampus'] = os.path.join(item['location'], 'BRAINSCut', 'l_Hippocampus_seg.nii.gz')
+                batchDict['rightPutamen'] = os.path.join(item['location'], 'BRAINSCut', 'r_Putamen_seg.nii.gz')
+                batchDict['leftPutamen'] = os.path.join(item['location'], 'BRAINSCut', 'l_Putamen_seg.nii.gz')
+                batchDict['rightThalamus'] = os.path.join(item['location'], 'BRAINSCut', 'r_Thalamus_seg.nii.gz')
+                batchDict['leftThalamus'] = os.path.join(item['location'], 'BRAINSCut', 'l_Thalamus_seg.nii.gz')
+                self.testingData(batchDict)
         else:
             # Testing is on
             self.batchList = lockedFileList
@@ -262,11 +347,14 @@ class SlicerDerivedImageEvalLogic(object):
         if slicer.util.getNode('L_Putamen_%s' % batchDict['session']) is None:
             volumeNode = slicer.util.loadLabelVolume(batchDict['leftPutamen'],
                                                      properties={'name':'L_Putamen_%s' % batchDict['session']})
+        if slicer.util.getNode('R_Putamen_%s' % batchDict['session']) is None:
+            volumeNode = slicer.util.loadLabelVolume(batchDict['rightPutamen'],
+                                                     properties={'name':'R_Putamen_%s' % batchDict['session']})
         dataDialog.close()
         # Get the image nodes
         t1Average = slicer.util.getNode('T1_Average_%s' % batchDict['session'])
         t2Average = slicer.util.getNode('T2_Average_%s' % batchDict['session'])
-        leftPutamen = slicer.util.getNode('L_Putamen_%s' % batchDict['session'])
+        # leftPutamen = slicer.util.getNode('L_Putamen_%s' % batchDict['session'])
         # brainsLabel = slicer.util.getNode('BRAINS_label')
         # Set up template scene
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
