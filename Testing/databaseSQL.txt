@@ -11,19 +11,17 @@ CREATE TABLE derived_images(
 CREATE TABLE image_reviews(
        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
        record_id INTEGER NOT NULL,
-       caudateRight INTEGER DEFAULT NULL,
-       caudateLeft INTEGER DEFAULT NULL,
-       hippocampusRight INTEGER DEFAULT NULL,
-       hippocampusLeft INTEGER DEFAULT NULL,
-       putamenRight INTEGER DEFAULT NULL,
-       putamenLeft INTEGER DEFAULT NULL,
-       thalamusRight INTEGER DEFAULT NULL,
-       thalamusLeft INTEGER DEFAULT NULL,
+       user_id CHAR(10) NOT NULL,
+       caudate_right INTEGER DEFAULT NULL,
+       caudate_left INTEGER DEFAULT NULL,
+       hippocampus_right INTEGER DEFAULT NULL,
+       hippocampus_left INTEGER DEFAULT NULL,
+       putamen_right INTEGER DEFAULT NULL,
+       putamen_left INTEGER DEFAULT NULL,
+       thalamus_right INTEGER DEFAULT NULL,
+       thalamus_left INTEGER DEFAULT NULL,
        FOREIGN KEY (record_id) REFERENCES derived_images(record_id)
 );
-
-INSERT INTO derived_images (analysis, project, subject, session, location)
-VALUES ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0131', '89205', '/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0131/89205');
 
 INSERT INTO derived_images (analysis, project, subject, session, location)
 VALUES ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0135', '67396', '/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0135/67396');
@@ -55,14 +53,14 @@ VALUES ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0140', '91781', '/paulsen/Exp
 INSERT INTO derived_images (analysis, project, subject, session, location, status)
 VALUES ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0241', '37022', '/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37022', 'reviewed');
 
-INSERT INTO review (record_id, caudateRight, caudateLeft, hippocampusRight, hippocampusLeft, putamenRight, putamenLeft, thalamusRight, thalamusLeft)
-VALUES ((SELECT record_id FROM derived_images WHERE location='/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37022'), 1, 1, 1, 1, 0, 0, 0, 0);
+INSERT INTO image_reviews (record_id, user_id, caudate_right, caudate_left, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
+VALUES ((SELECT record_id FROM derived_images WHERE location='/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37022'), 'tester', 1, 1, 1, 1, 0, 0, 0, 0);
 
 
 
 INSERT INTO derived_images (analysis, project, subject, session, location, status)
 VALUES ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0241', '37601', '/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37601', 'reviewed');
 
-INSERT INTO review (record_id, caudateRight, caudateLeft, hippocampusRight, hippocampusLeft, putamenRight, putamenLeft, thalamusRight, thalamusLeft)
-VALUES ((SELECT record_id FROM derived_images WHERE location='/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37601'), 0, 0, 0, 0, 1, 1, 1, 1);
+INSERT INTO image_reviews (record_id, user_id, caudate_right, caudate_left, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
+VALUES ((SELECT record_id FROM derived_images WHERE location='/paulsen/Experiments/B4AUTO.20120524_Results/FMRI_HD_024/0241/37601'), 'tester', 0, 0, 0, 0, 1, 1, 1, 1);
 
