@@ -40,9 +40,10 @@ class SlicerDerivedImageEvalWidget:
                         'hippocampus_right', 'hippocampus_left',
                         'putamen_right', 'putamen_left',
                         'thalamus_right', 'thalamus_left']
-        self.qaValues = ['good', 'bad']
-        # The default session label
-        self.sessionLabel = None
+        self.qaValues = {'good':1, 'bad':0}
+        self.currentSession = None
+        self.sessionQLabel = None
+        self.evalFrame = None
         # Set up the logic
         self.logic = SlicerDerivedImageEvalLogic()
         # Handle the UI display with/without Slicer
@@ -57,53 +58,34 @@ class SlicerDerivedImageEvalWidget:
             self.parent = parent
             self.layout = self.parent.layout()
 
-    def setup(self):
-        ### START DEVELOPMENT TOOL ###
-        # Layout within the summary collapsible button
-        self.reloadButton = qt.QPushButton("Reload")
-        self.reloadButton.toolTip = "Reload this module."
-        self.reloadButton.name = "SlicerDerivedImageEval Reload"
-        self.layout.addWidget(self.reloadButton)
-        self.reloadButton.connect('clicked()', self.onReload)
-        ###        END TOOL        ###
-        # Load UI file
+    def loadUIFile(self):
+        """ Load in the Qt Designer file """
         uiloader = qt.QUiLoader()
         qfile = qt.QFile(os.path.join(__file__, 'Resources/UI/evaluationPrototype.ui'))
         qfile.open(qt.QFile.ReadOnly)
-        evalFrame = uiloader.load(qfile)
-        qfile.close()
-        # Evaluation subsection
-        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
-        self.evaluationCollapsibleButton.text = 'Evaluation input'
-        self.evaluationCollapsibleButton.setLayout(evalFrame.findChild('QVBoxLayout'))
-        self.layout.addWidget(self.evaluationCollapsibleButton)
-        # Create the button mapper
+        try:
+            self.evalFrame = uiloader.load(qfile)
+        finally:
+            qfile.close()
+
+    def connectRegionButtons(self):
+        """ Map the region buttons clicked() signals to the function """
         self.buttonMapper = qt.QSignalMapper()
         self.buttonMapper.connect('mapped(const QString&)', self.selectRegion)
         self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
-        # Get buttons in UI file
-        self.buttons = self.evaluationCollapsibleButton.findChildren('QPushButton')
-        for button in self.buttons:
-            # self.buttons[button.objectName] = button
-            # connect the buttons to the UI logic
-            if button.objectName in self.regions:
-                # self.buttons[button.objectName].connect('clicked()', self.putamenLeftClicked)
-                self.buttonMapper.setMapping(button, button.objectName)
-                button.connect('clicked()', self.buttonMapper, 'map()')
-            elif button.objectName == 'nextButton':
-                button.connect('clicked()', self.onNextButtonClicked)
-            elif button.objectName == 'previousButton':
-                button.connect('clicked()', self.onPreviousButtonClicked)
-            else:
-                print "UNKNOWN BUTTON FOUND: %s" % button.objectName
-                print "------------------------------------"
-        # Get session label button
-        labels = self.evaluationCollapsibleButton.findChildren('QLabel')
-        for label in labels:
-            if not label.text.find('#') == -1:
-                self.sessionLabel = label
-                break
-        # Create the radio mapper
+        for region in self.regions:
+            self.pushButtons[region] = self.evaluationCollapsibleButton.findChild('QPushButton', region)
+            self.buttonMapper.setMapping(self.pushButton[region], region)
+            self.pushButtons[region].connect('clicked()', self.buttonMapper, 'map()')
+
+    def connectSessionButtons(self):
+        self.nextSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'nextSessionButton')
+        self.nextSessionButton.connect('clicked()', self.onNextButtonClicked)
+        self.previousSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'previousSessionButton')
+        self.nextSessionButton.connect('clicked()', self.onNextButtonClicked)
+
+    def connectRadioButtons(self):
+        """ Map the radio buttons """
         self.radioMapper = qt.QSignalMapper()
         self.radioMapper.connect('mapped(const QString&)', self.selectValue)
         # Get radios in UI file
@@ -113,12 +95,26 @@ class SlicerDerivedImageEvalWidget:
             button.connect('checked()', self.radioMapper, 'map()')
             button.setEnabled(False)
             print button.objectName
+
+    def setup(self):
+        self.loadUIFile()
+        # Evaluation subsection
+        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
+        self.evaluationCollapsibleButton.text = 'Evaluation input'
+        self.evaluationCollapsibleButton.setLayout(self.evalFrame.findChild('QVBoxLayout'))
+        self.layout.addWidget(self.evaluationCollapsibleButton)
+        # Connect push buttons
+        self.connectSessionButtons()
+        self.connectRegionButtons()
+        self.connectRadioButtons()
         # Add vertical spacer
         self.layout.addStretch(1)
         # Get data and update label
         self.logic.onGetBatchFilesClicked() # TODO: make a button for this!
-        self.sessionLabel.setText(self.logic.currentSession)
-        self.sessionLabel.update()
+        # Get session label button
+        self.sessionQLabel = self.evaluationCollapsibleButton.findChild('QLabel', 'sessionBoxedLabel')
+        self.sessionQLabel.setText(self.logic.currentSession)
+        self.sessionQLabel.update()
         # Set local var as instance attribute
         # self.batchFilesButton = batchFilesButton
 
@@ -127,24 +123,23 @@ class SlicerDerivedImageEvalWidget:
     #     fileList = self.logic.batchList
 
     def constructLabelNodeName(self, buttonName):
-        elements = buttonName.split('_')
-        region = elements[0].capitalize()
-        if buttonName.lower().find('left') > -1:
-            side = 'L'
-        elif buttonName.lower().find('right') > -1:
-            side = 'R'
+        """ Create the names for the volume and label nodes """
+        if buttonName.find('left') > -1:
+            nodeName = '_'.join([buttonName, 'left', self.sessionLabel.text])
+        elif buttonName.find('right') > -1:
+            nodeName = '_'.join([buttonName, 'right', self.sessionLabel.text])
         else:
-            side = ''
-        nodeName = '_'.join([side, region, self.sessionLabel.text])
+            nodeName = '_'.join([buttonName, self.sessionLabel.text])
         return nodeName
 
     def constructRadioButtonNames(self, buttonName):
+        """ Construct the radio button names, given the region push button name """
         goodName = '_'.join([buttonName, 'good'])
         badName = '_'.join([buttonName, 'bad'])
         return goodName, badName
 
     def selectRegion(self, buttonName):
-        # Get label and enable radios
+        """  """
         nodeName = self.constructLabelNodeName(buttonName)
         labelNode = slicer.util.getNode(nodeName)
         # Set the scene
