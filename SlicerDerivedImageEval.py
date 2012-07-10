@@ -1,21 +1,14 @@
 #! /usr/bin/env python
-
 import os
-import sqlite3
-import warnings
+
 from __main__ import ctk
 from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
-# import database_helper
 
 globals()['__file__'] = module_locator.module_path()
-
-#
-# SlicerDerivedImageEval
-#
 
 class SlicerDerivedImageEval:
     def __init__(self, parent):
@@ -27,25 +20,21 @@ class SlicerDerivedImageEval:
         parent.acknowledgementText = """ """
         self.parent = parent
 
-#
-# qSlicerDerivedImageEvalWidget
-#
 
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         # Register the regions and QA values
-        self.regions = ['accumben_right', 'accumben_left',
+        self.regions = ('accumben_right', 'accumben_left',
                         'caudate_right', 'caudate_left',
                         'globus_right', 'globus_left',
                         'hippocampus_right', 'hippocampus_left',
                         'putamen_right', 'putamen_left',
-                        'thalamus_right', 'thalamus_left']
-        self.qaValues = {'good':1, 'bad':0}
+                        'thalamus_right', 'thalamus_left')
         self.currentSession = None
         self.sessionQLabel = None
         self.evalFrame = None
-        # Set up the logic
-        self.logic = SlicerDerivedImageEvalLogic()
+        self.pushButtons = {}
+        self.radioButtons = {}
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
@@ -53,93 +42,133 @@ class SlicerDerivedImageEvalWidget:
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
             self.setup()
+            self.logic = SlicerDerivedImageEvalLogic(self)
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
+            self.logic = SlicerDerivedImageEvalLogic(self)
 
-    def loadUIFile(self):
+    def setup(self):
+        self.loadUIFile('Resources/UI/evaluationPrototype.ui') # Load the UI Designer file
+        # Evaluation subsection
+        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
+        self.evaluationCollapsibleButton.text = 'Evaluation input'
+        self.evaluationCollapsibleButton.setLayout(self.evalFrame.findChild('QVBoxLayout'))
+        self.layout.addWidget(self.evaluationCollapsibleButton)
+        # batch button
+        self.batchButton = qt.QPushButton()
+        self.batchButton.setText('Get evaluation batch')
+        self.layout.addWidget(self.batchButton)
+        self.batchButton.connect('clicked(bool)', self.logic.onGetBatchFilesClicked)
+        # cancelButton
+        self.cancelButton = qt.QPushButton()
+        self.cancelButton.setText('Cancel evaluation')
+        self.layout.addWidget(self.cancelButton)
+        self.cancelButton.connect('clicked(bool)', self.logic.onCancelButtonClicked)
+        # session label
+        self.sessionQLabel = self.evalFrame.findChild('QLabel', 'sessionBoxedLabel')
+        # Connect push buttons
+        self.connectSessionButtons()
+        self.connectRegionButtons()
+        # Add vertical spacer
+        self.layout.addStretch(1)
+
+    def loadUIFile(self, fileName):
         """ Load in the Qt Designer file """
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile(os.path.join(__file__, 'Resources/UI/evaluationPrototype.ui'))
+        qfile = qt.QFile(os.path.join(__file__, fileName))
         qfile.open(qt.QFile.ReadOnly)
         try:
             self.evalFrame = uiloader.load(qfile)
         finally:
             qfile.close()
 
+    def connectSessionButtons(self):
+        """ Connect the session navigation buttons to their logic """
+        self.nextSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'nextButton')
+        self.nextSessionButton.connect('clicked()', self.logic.onNextButtonClicked)
+        self.previousSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'previousButton')
+        self.previousSessionButton.connect('clicked()', self.logic.onPreviousButtonClicked)
+
     def connectRegionButtons(self):
         """ Map the region buttons clicked() signals to the function """
         self.buttonMapper = qt.QSignalMapper()
-        self.buttonMapper.connect('mapped(const QString&)', self.selectRegion)
+        self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
         self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
         for region in self.regions:
             self.pushButtons[region] = self.evaluationCollapsibleButton.findChild('QPushButton', region)
-            self.buttonMapper.setMapping(self.pushButton[region], region)
+            self.buttonMapper.setMapping(self.pushButtons[region], region)
             self.pushButtons[region].connect('clicked()', self.buttonMapper, 'map()')
 
-    def connectSessionButtons(self):
-        self.nextSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'nextSessionButton')
-        self.nextSessionButton.connect('clicked()', self.onNextButtonClicked)
-        self.previousSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'previousSessionButton')
-        self.nextSessionButton.connect('clicked()', self.onNextButtonClicked)
-
-    def connectRadioButtons(self):
-        """ Map the radio buttons """
-        self.radioMapper = qt.QSignalMapper()
-        self.radioMapper.connect('mapped(const QString&)', self.selectValue)
-        # Get radios in UI file
-        self.radios = self.evaluationCollapsibleButton.findChildren('QRadioButton')
-        for button in self.radios:
-            self.radioMapper.setMapping(button, button.objectName)
-            button.connect('checked()', self.radioMapper, 'map()')
-            button.setEnabled(False)
-            print button.objectName
-
-    def setup(self):
-        self.loadUIFile()
-        # Evaluation subsection
-        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
-        self.evaluationCollapsibleButton.text = 'Evaluation input'
-        self.evaluationCollapsibleButton.setLayout(self.evalFrame.findChild('QVBoxLayout'))
-        self.layout.addWidget(self.evaluationCollapsibleButton)
-        # Connect push buttons
-        self.connectSessionButtons()
-        self.connectRegionButtons()
-        self.connectRadioButtons()
-        # Add vertical spacer
-        self.layout.addStretch(1)
-        # Get data and update label
-        self.logic.onGetBatchFilesClicked() # TODO: make a button for this!
-        # Get session label button
-        self.sessionQLabel = self.evaluationCollapsibleButton.findChild('QLabel', 'sessionBoxedLabel')
-        self.sessionQLabel.setText(self.logic.currentSession)
-        self.sessionQLabel.update()
-        # Set local var as instance attribute
-        # self.batchFilesButton = batchFilesButton
-
-    # def onBatchFilesButtonClicked(self):
-    #     print "Batch file button clicked..."
-    #     fileList = self.logic.batchList
-
-    def constructLabelNodeName(self, buttonName):
-        """ Create the names for the volume and label nodes """
-        if buttonName.find('left') > -1:
-            nodeName = '_'.join([buttonName, 'left', self.sessionLabel.text])
-        elif buttonName.find('right') > -1:
-            nodeName = '_'.join([buttonName, 'right', self.sessionLabel.text])
-        else:
-            nodeName = '_'.join([buttonName, self.sessionLabel.text])
-        return nodeName
-
     def constructRadioButtonNames(self, buttonName):
-        """ Construct the radio button names, given the region push button name """
+        """ LOGIC: Construct the radio button names, given the region push button name """
         goodName = '_'.join([buttonName, 'good'])
         badName = '_'.join([buttonName, 'bad'])
         return goodName, badName
 
+    def _findRadioButtons(self, buttonName):
+        """ Returns the QRadioButtons for the matching QPushButton """
+        goodName, badName = self.constructRadioButtonNames(buttonName)
+        goodRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', goodName)
+        badRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', badName)
+        return goodRadio, badRadio
+
+    def enableRadios(self, buttonName):
+        """ Enable the radio buttons that match the given region push button """
+        goodRadio, badRadio = self._findRadioButtons(buttonName)
+        goodRadio.setEnabled(True)
+        badRadio.setEnabled(True)
+
+    def updateSessionQLabel(self):
+        self.sessionQLabel.text = self.currentSession
+        self.sessionQLabel.update()
+
+    def resetRadioWidgets(self):
+        """ Disable and reset all radio buttons in the widget """
+        for button in self.radios:
+            button.isChecked(False)
+            button.isEnabled(False)
+
+    def resetWidget(self):
+        self.resetRadioWidgets()
+        self.updateSessionQLabel(self.logic.currentSession)
+
+    def exit(self):
+        """ When Slicer exits, prompt user if they want to write the last evaluation """
+        pass
+
+class SlicerDerivedImageEvalLogic(object):
+    """ Logic class to be used 'under the hood' of the evaluator """
+    def __init__(self, widget):
+        self.widget = widget
+        self.regions = self.widget.regions
+        self.qaValueMap = {'good':1, 'bad':0}
+        self.user_id = None
+        self.database = None
+        self.batchList = None
+        self.batchSize = 1
+        self.batchRows = None
+        self.count = 0 # Starting value
+        self.currentSession = None
+        self.sessionFiles = {}
+        self.currentRecordID = None
+        self.testing = True
+        self.setup()
+
+    def setup(self):
+        if self.testing:
+            from database_helper import sqliteDatabase
+            self.user_id = 'ttest'
+            self.database = sqliteDatabase(self.batchSize)
+        else:
+            from database_helper import postgresDatabase
+            self.user_id = os.environ['USER']
+            self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', batchSize)
+            # TODO: Handle password
+
     def selectRegion(self, buttonName):
-        """  """
+        """ Load the outline of the selected region into the scene """
         nodeName = self.constructLabelNodeName(buttonName)
         labelNode = slicer.util.getNode(nodeName)
         # Set the scene
@@ -152,238 +181,84 @@ class SlicerDerivedImageEvalWidget:
         for sliceNode in sliceNodes.values():
             sliceNode.UseLabelOutlineOn()
 
-    def enableRadios(self, buttonName):
-        goodName, badName = self.constructRadioButtonNames(buttonName)
-        goodRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', goodName)
-        badRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', badName)
-        goodRadio.setEnabled(True)
-        badRadio.setEnabled(True)
+    def constructLabelNodeName(self, buttonName):
+        """ Create the names for the volume and label nodes """
+        nodeName = '_'.join([self.currentSession, buttonName])
+        return nodeName
 
-    def selectValue(self, buttonName):
-        if buttonName.find('good') > -1:
-            print "Value is 1 for %s" % buttonName
-        elif buttonName.find('bad') > -1:
-            print "Value is 0 for %s" % buttonName
-        else:
-            raise Exception("Unknown radio button name %s" % buttonName)
+    def onCancelButtonClicked(self):
+        # TODO: Populate this function
+        #   onNextButtonClicked WITHOUT the write to database
+        print "Cancelled!"
 
-    def onNextButtonClicked(self):
-        if self.writeReviewToDatabase():
-            self.logic.onNextButtonClicked()
-            self.sessionLabel.text = self.logic.currentSession
-            self.sessionLabel.update()
+    def writeToDatabase(self, evaluations):
+        values = (self.batchRows[self.count]['record_id'], self.user_id)
+        values = values + evaluations
+        columns = ('record_id', 'reviewer_id') + self.regions
+        self.database.writeAndUnlockRecord(columns, values)
 
-    def onPreviousButtonClicked(self):
-        if self.writeReviewToDatabase():
-            self.logic.onPreviousButtonClicked()
-            self.sessionLabel.text = self.logic.currentSession
-            self.sessionLabel.update()
-
-    def writeReviewToDatabase(self):
-        valueDict = {}
-        for radio in self.radios:
-            if radio.objectName.find('good') > -1 and radio.isChecked():
-                value = 1
-            else:
-                value = 0
-            elements = radio.objectName.split('_')
-            region = '_'.join(elements[:-1])
-            valueDict[region] = value
-            self.logic.writeAndUnlockRecord(valueDict)
-            # self.cursor.execute("UPDATE derived_images \
-            #                      SET status='reviewed' \
-            #                      WHERE session=?", (self.sessionLabel.text,))
-            # record_id = self.cursor.execute("SELECT record_id \
-            #                                  FROM derived_images \
-            #                                  WHERE session=?", (self.sessionLabel.text,))
-            # self.cursor.execute("UPDATE image_reviews \
-            #                      SET ?=? SET user_id=? \
-            #                      WHERE record_id=?", (region, value, self.user_id, record_id))
-        return True
-
-    def onReload(self, moduleName="SlicerDerivedImageEval"):
-        """ ============ DEVELOPMENT TOOL =============
-            Generic development reload method for any scripted module.
-            ModuleWizard will subsitute correct default moduleName.
-        """
-        import imp
-        import os
-        import sys
-        import slicer
-        widgetName = moduleName + "Widget"
-        # reload the source code
-        # - set source file path
-        # - load the module to the global space
-        if not '__file__' in locals():
-            __file__ = os.path.join(os.getcwd(), 'SlicerDerivedImageEval.py')
-            print "__file__ (2) = %s" % __file__
-        # TODO: Find a method to get the __file__ for THIS script, NOT the factory generated one! (see Pieper's below)
-        filePath = eval('slicer.modules.%s.path' % moduleName.lower())
-        p = os.path.dirname(filePath)
-        if not sys.path.__contains__(p):
-            sys.path.insert(0, p)
-        fp = open(filePath, "r")
-        globals()[moduleName] = imp.load_module(moduleName, fp, filePath,
-                                                ('.py', 'r', imp.PY_SOURCE))
-        fp.close()
-        # rebuild the widget
-        # - find and hide the existing widget
-        # - create a new widget in the existing parent
-        parent = slicer.util.findChildren(name='%s Reload' % moduleName)[0].parent()
-        for child in parent.children():
-            try:
-                child.hide()
-            except AttributeError:
-                pass
-        globals()[widgetName.lower()] = eval('globals()["%s"].%s(parent)' %
-                                             (moduleName, widgetName))
-        globals()[widgetName.lower()].setup()
-
-
-class SlicerDerivedImageEvalLogic(object):
-    """ Logic class to be used 'under the hood' of the evaluator """
-    def __init__(self):
-        self.user_id = os.environ['USER']
-        self.testing = False
-        self.database = None
-        self.experiment = None
-        self.batchList = None
-        self.batchSize = 1
-        self.batchRows = None
-        #  self.testingData()
-        self.count = 0 # Starting value
-        self.currentSession = None
-        self.currentRecordID = None
-        # self.onGetBatchFilesClicked() # TESTING
+    def _getLabelFileNameFromRegion(self, regionName):
+        try:
+            region, side = regionName.split('_')
+            fileName = '_'.join([side[0], region.capitalize(), 'seg.nii.gz'])
+        except ValueError:
+            region = regionName
+            fileName = '_'.join([region, 'seg.nii.gz'])
+        return fileName
 
     def onGetBatchFilesClicked(self):
-        import os
-        self.database = os.path.join(__file__, 'Testing', 'sqlTest.db')
-        self._getLockedFileList()
+        """ """
+        self.count = 0
+        self.batchRows = self.database.lockAndReadRecords()
+        self.constructFilePaths()
+        self.setCurrentSession()
+        self.loadData()
+        self.loadMRMLNodesToScene()
 
-    #========= TODO: move the database code to a helper file =========
-    def openDatabase(self):
-        self.connection = sqlite3.connect(self.database, isolation_level="EXCLUSIVE")
-        self.connection.row_factory = sqlite3.Row
-        self.cursor = self.connection.cursor()
-        self.cursor.arraysize = self.batchSize
+    def setCurrentSession(self):
+        self.currentSession = self.sessionFiles['session']
 
-    def getBatch(self):
-        # Get batch
-        self.cursor.execute("SELECT * \
-                            FROM derived_images \
-                            WHERE status = 'unreviewed'")
-        rows = self.cursor.fetchmany()
-        if not rows:
-            raise warnings.warn("No rows were status == 'unreviewed' were found!")
-        return rows
+    def constructFilePaths(self):
+        row = self.batchRows[self.count]
+        sessionFiles = {}
+        baseDirectory = os.path.join(row['location'], row['_analysis'], row['_project'], row['_subject'], row['_session'])
+        sessionFiles['T1'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
+        sessionFiles['T2'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+        for regionName in self.regions:
+            fileName = self._getLabelFileNameFromRegion(regionName)
+            sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+        sessionFiles['session'] = row['_session']
+        self.sessionFiles = sessionFiles
+        print self.sessionFiles
 
-    def lockBatch(self, rows):
-        # Lock batch members
-        ids = ()
-        idString = ""
-        for row in rows:
-            ids = ids + (row['record_id'],)
-            idString += "?,"
-        idString = idString[:-1]
-        self.cursor.execute("UPDATE derived_images \
-                             SET status='locked' \
-                             WHERE record_id IN ({0})".format(idString), ids)
-        self.cursor.connection.commit()
-        # return ids
-
-    def lockAndReadRecords(self):
-        self.openDatabase()
-        try:
-            rows = self.getBatch()
-            #ids = self.lockBatch(rows)
-            self.lockBatch(rows)
-        finally:
-            self.connection.close()
-        return rows
-
-    def writeAndUnlockRecord(self, valueDict):
-        self.openDatabase()
-        ID = (self.batchRows[self.count]['record_id'],)
-        try:
-            for region in valueDict:
-                thisTuple = ()
-                thisTuple = (region,) + ID + (self.user_id, valueDict[region])
-                print thisTuple
-                self.cursor.execute("INSERT INTO image_reviews (record_id, user_id, ?)\
-                                     VALUES (?, ?, ?)", thisTuple)
-            # self.cursor.execute("UPDATE image_reviews \
-            #                      SET caudateRight=?, caudateLeft=?, \
-            #                      hippocampusRight=?, hippocampusLeft=?, \
-            #                      putamenRight=?, putamenLeft=?, \
-            #                      thalamusRight=?, thalamusLeft=? \
-            #                      WHERE record_id=?", thisTuple)
-            self.cursor.execute("UPDATE derived_images \
-                                 SET status='reviewed' \
-                                 SET user_id=? \
-                                 WHERE record_id=? AND status='locked'", (self.user_id,) + ID)
-            self.cursor.commit()
-        finally:
-            self.connection.close()
-    # ========= ========= ========= ========= ========= ========= =========
-
-    def _getLockedFileList(self, lockedFileList=None):
-        """ If the testing mode is on, lockedFileList ~= None """
-        if lockedFileList is None:
-            self.batchRows = self.lockAndReadRecords()
-            for row in self.batchRows:
-                batchDict = {}
-                batchDict['session'] = row['session']
-                batchDict['T1'] = os.path.join(row['location'], 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
-                batchDict['T2'] = os.path.join(row['location'], 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
-                batchDict['rightAccumben'] = os.path.join(row['location'], 'BRAINSCut', 'r_Accumben_seg.nii.gz')
-                batchDict['leftAccumben'] = os.path.join(row['location'], 'BRAINSCut', 'l_Accumben_seg.nii.gz')
-                batchDict['rightCaudate'] = os.path.join(row['location'], 'BRAINSCut', 'r_Caudate_seg.nii.gz')
-                batchDict['leftCaudate'] = os.path.join(row['location'], 'BRAINSCut', 'l_Caudate_seg.nii.gz')
-                batchDict['rightGlobus'] = os.path.join(row['location'], 'BRAINSCut', 'r_Globus_seg.nii.gz')
-                batchDict['leftGlobus'] = os.path.join(row['location'], 'BRAINSCut', 'l_Globus_seg.nii.gz')
-                batchDict['rightHippocampus'] = os.path.join(row['location'], 'BRAINSCut', 'r_Hippocampus_seg.nii.gz')
-                batchDict['leftHippocampus'] = os.path.join(row['location'], 'BRAINSCut', 'l_Hippocampus_seg.nii.gz')
-                batchDict['rightPutamen'] = os.path.join(row['location'], 'BRAINSCut', 'r_Putamen_seg.nii.gz')
-                batchDict['leftPutamen'] = os.path.join(row['location'], 'BRAINSCut', 'l_Putamen_seg.nii.gz')
-                batchDict['rightThalamus'] = os.path.join(row['location'], 'BRAINSCut', 'r_Thalamus_seg.nii.gz')
-                batchDict['leftThalamus'] = os.path.join(row['location'], 'BRAINSCut', 'l_Thalamus_seg.nii.gz')
-                self.testingData(batchDict)
-            self.currentSession = self.batchRows[0]['session']
-            self.loadMRMLNodesToScene()
-        else:
-            # Testing is on
-            self.batchList = lockedFileList
-
-    def testingData(self, batchDict):
+    def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
         """
-        import os
-        if not os.environ['USER'] == 'dmwelch':
-            return 0
         # TODO: Make a better dialog box here
         # dialogFrame = qt.QFrame()
         # dialogLayout = qt.QVBoxLayout()
         dataDialog = qt.QPushButton();
-        dataDialog.setText('Loading files for session %s...' % batchDict['session']);
+        dataDialog.setText('Loading files for session %s...' % self.currentSession);
         # dataDialog.setLayout(dialogLayout)
         dataDialog.show()
-        if slicer.util.getNode('T1_Average_%s' % batchDict['session']) is None:
-            volumeNode = slicer.util.loadVolume(batchDict['T1'], properties={'name':"T1_Average_%s" % batchDict['session']})
-        # if slicer.util.getNode('T2_Average_%s' % batchDict['session']) is None:
-        #     volumeNode = slicer.util.loadVolume(batchDict['T2'], properties={'name':"T2_Average_%s" % batchDict['session']})
-        if slicer.util.getNode('L_Putamen_%s' % batchDict['session']) is None:
-            volumeNode = slicer.util.loadLabelVolume(batchDict['leftPutamen'],
-                                                     properties={'name':'L_Putamen_%s' % batchDict['session']})
-        # if slicer.util.getNode('R_Putamen_%s' % batchDict['session']) is None:
-        #     volumeNode = slicer.util.loadLabelVolume(batchDict['rightPutamen'],
-        #                                              properties={'name':'R_Putamen_%s' % batchDict['session']})
+        t1NodeName = '%s_t1_average' % self.currentSession
+        if slicer.util.getNode(t1NodeName) is None:
+            volumeNode = slicer.util.loadVolume(self.sessionFiles['T1'], properties={'name':t1NodeName})
+        if not volumeNode:
+            raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['T1'])
+        ### if slicer.util.getNode('%s_t2_average' % self.currentSession) is None:
+        ###     volumeNode = slicer.util.loadVolume(self.sessionFiles['T2'],
+        ###                                         properties={'name':"%s_t2_average" % self.currentSession})
+        for region in self.regions:
+            regionNodeName = '%s_%s' % (self.currentSession, region)
+            if slicer.util.getNode(regionNodeName) is None:
+                slicer.util.loadLabelVolume(self.sessionFiles[region], properties={'name':regionNodeName})
         dataDialog.close()
 
     def loadMRMLNodesToScene(self):
         # Get the image nodes
-        t1Average = slicer.util.getNode('T1_Average_%s' % self.currentSession)
-        ### t2Average = slicer.util.getNode('T2_Average_%s' % self.currentSession)
+        t1Average = slicer.util.getNode('%s_t1_average' % self.currentSession)
+        ### t2Average = slicer.util.getNode('%s_t2_average' % self.currentSession)
         # Set up template scene
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
         for compositeNode in compositeNodes.values():
@@ -396,22 +271,44 @@ class SlicerDerivedImageEvalLogic(object):
         applicationLogic = slicer.app.applicationLogic()
         applicationLogic.FitSliceToAll()
 
+    def getEvaluationValues(self):
+        """ Get the evaluation values from the widget """
+        values = ()
+        for region in self.regions:
+            goodButton, badButton = self.widget._findRadioButtons(region)
+            if goodButton.isChecked():
+                values = values + (self.qaValueMap['good'],)
+            elif badButton.isChecked():
+                values = values + (self.qaValueMap['bad'],)
+            else:
+                Exception('Session cannot be changed until all regions are evaluated.  Missing region: %s' % region)
+        return values
+
     def onNextButtonClicked(self):
-        print "Next button clicked..."
+        """ Capture the evaluation values, write them to the database, reset the widgets, then load the next dataset """
+        evaluations = self.getEvaluationValues()
+        self.database.writeAndUnlockRecord(evaluations)
         count = self.count + 1
         if count <= self.batchSize - 1:
             self.count = count
         else:
             self.count = 0
-        self.currentSession = self.batchRows[count]['session']
-        self.loadMRMLNodesToScene()
+        self.loadNewSession()
+        self.widget.resetWidget()
 
     def onPreviousButtonClicked(self):
-        print "Previous button clicked..."
+        values = self.getEvaluationValues()
+        self.database.writeAndUnlockRecord(values)
         count = self.count - 1
         if count >= 0:
             self.count = count
         else:
             self.count = self.batchSize
-        self.currentSession = self.batchRows[count]['session']
+        self.loadNewSession()
+        self.widget.resetWidget()
+
+    def loadNewSession(self):
+        self.constructFilePaths()
+        self.setCurrentSession()
+        self.loadData()
         self.loadMRMLNodesToScene()
