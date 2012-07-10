@@ -10,15 +10,18 @@ class sqliteDatabase(object):
 
     """
 
-    def __init__(self, arraySize):
+    def __init__(self, login, arraySize):
         import sqlite3
         globals()['sql'] = sqlite3
         self.database = None
         self.isolation_level = "EXCLUSIVE"
         self.connection = None
         self.cursor = None
+        self.reviewer_login = login
+        self.reviewer_id = None
         self.arraySize = arraySize
         self.createTestDatabase()
+        self.getReviewerID()
 
     def createTestDatabase(self):
         """ Create a dummy database file"""
@@ -34,9 +37,15 @@ class sqliteDatabase(object):
             commands = fid.read()
             self.connection.executescript(commands)
         finally:
-            self.cursor.close(); self.cursor = None
-            self.connection.close(); self.connection = None
+            self.closeDatabase()
             fid.close()
+
+    def getReviewerID(self):
+        self.openDatabase()
+        self.cursor.execute("SELECT reviewer_id FROM reviewers \
+                             WHERE login=?", (self.reviewer_login,))
+        self.reviewer_id = self.cursor.fetchone()
+        self.closeDatabase()
 
     def openDatabase(self):
         self.connection = sql.connect(self.database, isolation_level=self.isolation_level)
@@ -58,13 +67,11 @@ class sqliteDatabase(object):
         ids = ()
         idString = ""
         for row in rows:
-            ids = ids + (row['record_id'],)
-            idString += "?,"
-        idString = idString[:-1]
-        self.cursor.execute("UPDATE derived_images \
-                             SET status='L' \
-                             WHERE record_id IN ({0})".format(idString), ids)
-        self.cursor.connection.commit()
+            ids = ids + (str(row['record_id']),)
+        idString = ', '.join(ids)
+        sqlCommand = "UPDATE derived_images SET status='L' WHERE record_id IN ({0});".format(idString)
+        self.connection.executescript(sqlCommand)
+        self.connection.commit()
 
     def lockAndReadRecords(self):
         self.openDatabase()
@@ -72,38 +79,44 @@ class sqliteDatabase(object):
             rows = self.getBatch()
             self.lockBatch(rows)
         finally:
-            self.connection.close()
+            self.closeDatabase()
         return rows
 
     def writeAndUnlockRecord(self, columns, values):
-        self.database.openDatabase()
-        columnString = ', '.join(columns)
-        valueString = ()
-        for value in values:
-            valueString = valueString + ('%s',)
-        valuesString = ', '.join(values)
-        sqlCommand = "INSERT INTO image_reviews ({0}) VALUES \
-                      ({1})".format(columnString, valueString)
+        self.openDatabase()
+        columnString = ', '.join(('reviewer_id',) + columns)
+        valueString = ', '.join((str(self.reviewer_id[0]),) + values)
+        # for value in values:
+        #     valueString = valueString + ('?',)
+        # valuesString = ', '.join(valueString)
+        sqlCommand = "INSERT INTO image_reviews ({0}) VALUES ({1});".format(columnString, valueString)
         print sqlCommand
         try:
-            self.cursor.execute(sqlCommand, values)
+            self.connection.executescript(sqlCommand)
             self.cursor.execute("UPDATE derived_images \
                                  SET status='R' \
-                                 WHERE record_id=? AND status='L'", (values(0),))
-            self.cursor.commit()
+                                 WHERE record_id=? AND status='L'", (values[1],))
+            self.connection.commit()
         finally:
-            self.connection.close()
+            self.closeDatabase()
+
+    def closeDatabase(self):
+        self.cursor.close()
+        self.cursor = None
+        self.connection.close()
+        self.connection = None
 
 
 class postgresDatabase(object):
     """ """
-    def __init__(self, host, port, database, user, password=None, arraySize=1):
+    def __init__(self, host, port, database, user, password=None, login=None, arraySize=1):
         import psycopg2 as sql
         self.host = host
         self.port = port
         self.database = database
         self.user = user
         self.password = password
+        self.reviewer_login = login
         self.arraySize = arraySize
 
     def openDatabase(self):

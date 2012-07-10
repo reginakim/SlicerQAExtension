@@ -24,25 +24,27 @@ class SlicerDerivedImageEval:
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         # Register the regions and QA values
-        self.regions = ('accumben_right', 'accumben_left',
-                        'caudate_right', 'caudate_left',
-                        'globus_right', 'globus_left',
-                        'hippocampus_right', 'hippocampus_left',
-                        'putamen_right', 'putamen_left',
-                        'thalamus_right', 'thalamus_left')
+        self.images = ('T2 image', 'Brain mask','T1 image' ) #T1 is last so that reviewers see it as background for regions
+        self.regions = ('accumben_left', 'accumben_right',
+                        'caudate_left', 'caudate_right',
+                        'globus_left', 'globus_right',
+                        'hippocampus_left', 'hippocampus_right',
+                        'putamen_left', 'putamen_right',
+                        'thalamus_left', 'thalamus_right')
         self.currentSession = None
-        self.sessionQLabel = None
-        self.evalFrame = None
-        self.pushButtons = {}
-        self.radioButtons = {}
+        ###        self.sessionQLabel = None
+        ###        self.evalFrame = None
+        ###        self.pushButtons = {}
+        ###        self.radioButtons = {}
+        self.reviewButtons = {}
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.setup()
             self.logic = SlicerDerivedImageEvalLogic(self)
+            self.setup()
             self.parent.show()
         else:
             self.parent = parent
@@ -50,12 +52,31 @@ class SlicerDerivedImageEvalWidget:
             self.logic = SlicerDerivedImageEvalLogic(self)
 
     def setup(self):
-        self.loadUIFile('Resources/UI/evaluationPrototype.ui') # Load the UI Designer file
+        # Batch navigation
+        batchNavigation = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
+        self.layout.addWidget(batchNavigation)
+        self.navigationWidget = batchNavigation.findChild("buttonContainerWidget")
+        ### TODO: Implement these buttons
+        ### self.batchListWidget = batchNavigation.findChild("listWidget")
+        ### self.previousButton = self.navigationWidget.findChild("previousButton")
+        ### self.quitButton = self.navigationWidget.findChild("quitButton")
+        ### self.nextButton = self.navigationWidget.findChild("nextButton")
         # Evaluation subsection
-        self.evaluationCollapsibleButton = ctk.ctkCollapsibleButton()
-        self.evaluationCollapsibleButton.text = 'Evaluation input'
-        self.evaluationCollapsibleButton.setLayout(self.evalFrame.findChild('QVBoxLayout'))
-        self.layout.addWidget(self.evaluationCollapsibleButton)
+        imageQA = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
+        self.layout.addWidget(imageQA)
+        ### def reviewButtonFactory(self):
+        for image in self.images:
+            reviewButtonsWidget = QEvaluationWidget(self.loadUIFile('Resources/UI/reviewButtonsWidget.ui'), image)
+            reviewButtonsWidget.setText(image)
+            imageQA.layout.addWidget(reviewButtonsWidget.widget)
+
+        for region in self.regions:
+            reviewButtonsWidget = QEvaluationWidget(self.loadUIFile('Resources/UI/reviewButtonsWidget.ui'), image)
+            reviewButtonsWidget.setText(image)
+            imageQA.layout.addWidget(reviewButtonsWidget.widget)
+
+        # self.radioButtons = self.evalFrame.findChildren('QRadioButton')
+        self.layout.addWidget(imageQA)
         # batch button
         self.batchButton = qt.QPushButton()
         self.batchButton.setText('Get evaluation batch')
@@ -67,22 +88,23 @@ class SlicerDerivedImageEvalWidget:
         self.layout.addWidget(self.cancelButton)
         self.cancelButton.connect('clicked(bool)', self.logic.onCancelButtonClicked)
         # session label
-        self.sessionQLabel = self.evalFrame.findChild('QLabel', 'sessionBoxedLabel')
+        # self.sessionQLabel = self.evaluationCollapsibleButton.findChild('QLabel', 'sessionBoxedLabel')
         # Connect push buttons
         self.connectSessionButtons()
         self.connectRegionButtons()
+        ### TESTING ###
+        if True:
+            self.logic.onGetBatchFilesClicked()
+        ### END ###
         # Add vertical spacer
         self.layout.addStretch(1)
 
     def loadUIFile(self, fileName):
-        """ Load in the Qt Designer file """
+        """ Return the object defined in the Qt Designer file """
         uiloader = qt.QUiLoader()
         qfile = qt.QFile(os.path.join(__file__, fileName))
-        qfile.open(qt.QFile.ReadOnly)
-        try:
-            self.evalFrame = uiloader.load(qfile)
-        finally:
-            qfile.close()
+        with qfile.open(qt.QFile.ReadOnly):
+            return uiloader.load(qfile)
 
     def connectSessionButtons(self):
         """ Connect the session navigation buttons to their logic """
@@ -121,18 +143,18 @@ class SlicerDerivedImageEvalWidget:
         badRadio.setEnabled(True)
 
     def updateSessionQLabel(self):
-        self.sessionQLabel.text = self.currentSession
+        self.sessionQLabel.setText(str(self.currentSession))
         self.sessionQLabel.update()
 
     def resetRadioWidgets(self):
         """ Disable and reset all radio buttons in the widget """
-        for button in self.radios:
+        for button in self.radioButtons:
             button.isChecked(False)
             button.isEnabled(False)
 
     def resetWidget(self):
         self.resetRadioWidgets()
-        self.updateSessionQLabel(self.logic.currentSession)
+        self.updateSessionQLabel()
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
@@ -143,13 +165,14 @@ class SlicerDerivedImageEvalLogic(object):
     def __init__(self, widget):
         self.widget = widget
         self.regions = self.widget.regions
-        self.qaValueMap = {'good':1, 'bad':0}
+        self.qaValueMap = {'good':'1', 'bad':'0'}
         self.user_id = None
         self.database = None
         self.batchList = None
-        self.batchSize = 1
+        self.batchSize = 3
         self.batchRows = None
         self.count = 0 # Starting value
+        self.maxCount = 0
         self.currentSession = None
         self.sessionFiles = {}
         self.currentRecordID = None
@@ -160,11 +183,11 @@ class SlicerDerivedImageEvalLogic(object):
         if self.testing:
             from database_helper import sqliteDatabase
             self.user_id = 'ttest'
-            self.database = sqliteDatabase(self.batchSize)
+            self.database = sqliteDatabase(self.user_id, self.batchSize)
         else:
             from database_helper import postgresDatabase
             self.user_id = os.environ['USER']
-            self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', batchSize)
+            self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
             # TODO: Handle password
 
     def selectRegion(self, buttonName):
@@ -210,13 +233,16 @@ class SlicerDerivedImageEvalLogic(object):
         """ """
         self.count = 0
         self.batchRows = self.database.lockAndReadRecords()
+        self.maxCount = len(self.batchRows)
         self.constructFilePaths()
         self.setCurrentSession()
         self.loadData()
         self.loadMRMLNodesToScene()
+        self.widget.resetWidget()
 
     def setCurrentSession(self):
         self.currentSession = self.sessionFiles['session']
+        self.widget.currentSession = self.currentSession
 
     def constructFilePaths(self):
         row = self.batchRows[self.count]
@@ -227,9 +253,9 @@ class SlicerDerivedImageEvalLogic(object):
         for regionName in self.regions:
             fileName = self._getLabelFileNameFromRegion(regionName)
             sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
-        sessionFiles['session'] = row['_session']
+        sessionFiles['session'] = str(row['_session'])
+        sessionFiles['record_id'] = str(row['record_id'])
         self.sessionFiles = sessionFiles
-        print self.sessionFiles
 
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
@@ -244,8 +270,8 @@ class SlicerDerivedImageEvalLogic(object):
         t1NodeName = '%s_t1_average' % self.currentSession
         if slicer.util.getNode(t1NodeName) is None:
             volumeNode = slicer.util.loadVolume(self.sessionFiles['T1'], properties={'name':t1NodeName})
-        if not volumeNode:
-            raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['T1'])
+            if not volumeNode:
+                raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['T1'])
         ### if slicer.util.getNode('%s_t2_average' % self.currentSession) is None:
         ###     volumeNode = slicer.util.loadVolume(self.sessionFiles['T2'],
         ###                                         properties={'name':"%s_t2_average" % self.currentSession})
@@ -286,10 +312,18 @@ class SlicerDerivedImageEvalLogic(object):
 
     def onNextButtonClicked(self):
         """ Capture the evaluation values, write them to the database, reset the widgets, then load the next dataset """
-        evaluations = self.getEvaluationValues()
-        self.database.writeAndUnlockRecord(evaluations)
+        try:
+            evaluations = self.getEvaluationValues()
+        except:
+            return
+        columns = ('record_id',) + self.regions
+        values = (self.sessionFiles['record_id'], ) + evaluations
+        try:
+            self.database.writeAndUnlockRecord(columns, values)
+        except sqlite3.OperationalError:
+            print "Error here"
         count = self.count + 1
-        if count <= self.batchSize - 1:
+        if count <= self.maxCount - 1:
             self.count = count
         else:
             self.count = 0
@@ -297,13 +331,18 @@ class SlicerDerivedImageEvalLogic(object):
         self.widget.resetWidget()
 
     def onPreviousButtonClicked(self):
-        values = self.getEvaluationValues()
-        self.database.writeAndUnlockRecord(values)
+        try:
+            evaluations = self.getEvaluationValues()
+        except:
+            return
+        columns = ('record_id', ) + self.regions
+        values = (self.sessionFiles['record_id'], ) + evaluations
+        self.database.writeAndUnlockRecord(columns, values)
         count = self.count - 1
         if count >= 0:
             self.count = count
         else:
-            self.count = self.batchSize
+            self.count = self.maxCount - 1
         self.loadNewSession()
         self.widget.resetWidget()
 
@@ -312,3 +351,37 @@ class SlicerDerivedImageEvalLogic(object):
         self.setCurrentSession()
         self.loadData()
         self.loadMRMLNodesToScene()
+
+class QEvaluationWidget(object):
+    def __init__(self, widget, name=None):
+        self.widget = widget
+        self.name = name
+
+    def name(self):
+        return self.name
+
+    def setName(self, name):
+        """ Set name value for class """
+        self.name = name
+
+    def _formatName(self, text):
+        title, side, junk = self.name.split("_")
+        if not side is None:
+            pushText = " ".join(side.capitalize(), title)
+        else:
+            pushText = title.capitalize()
+        return pushText
+
+    def setText(self, text):
+        pushButton = self.widget.findChild("QPushButton")
+        pushButton.setText(self._formatText(text))
+
+    def text(self):
+        pushButton = self.widget.findChild("QPushButton")
+        return pushButton.text
+
+    def getValue(self):
+        radios = self.widget.findChildren("QRadioButton")
+        for radio in radios:
+            if radio.checked:
+                return radio ### TODO: Need to get at the identity here!

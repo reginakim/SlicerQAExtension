@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>365</width>
-    <height>801</height>
+    <width>417</width>
+    <height>838</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
    <item>
     <widget class="QFrame" name="navigationFrame">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -67,8 +67,8 @@
         </property>
         <property name="maximumSize">
          <size>
-          <width>100</width>
-          <height>100</height>
+          <width>75</width>
+          <height>50</height>
          </size>
         </property>
         <property name="baseSize">
@@ -90,10 +90,13 @@
           <height>100</height>
          </size>
         </property>
+        <property name="shortcut">
+         <string>Meta+Ctrl+A</string>
+        </property>
        </widget>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="imageInfoLayout" stretch="0,0,0,0">
+       <layout class="QVBoxLayout" name="imageInfoLayout" stretch="0,0,0">
         <property name="spacing">
          <number>0</number>
         </property>
@@ -106,22 +109,6 @@
         <property name="rightMargin">
          <number>10</number>
         </property>
-        <item>
-         <spacer name="verticalTopSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Fixed</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>13</width>
-            <height>13</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
         <item>
          <widget class="QLabel" name="sessionLabel">
           <property name="sizePolicy">
@@ -178,7 +165,7 @@
       <item>
        <widget class="QPushButton" name="nextButton">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -191,8 +178,8 @@
         </property>
         <property name="maximumSize">
          <size>
-          <width>100</width>
-          <height>100</height>
+          <width>75</width>
+          <height>50</height>
          </size>
         </property>
         <property name="baseSize">
@@ -213,6 +200,9 @@
           <width>100</width>
           <height>100</height>
          </size>
+        </property>
+        <property name="shortcut">
+         <string>Meta+Ctrl+S</string>
         </property>
        </widget>
       </item>
@@ -237,6 +227,12 @@
    </item>
    <item>
     <widget class="QGroupBox" name="regionQAGroupBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="title">
       <string>Region Quality Assurance</string>
      </property>
@@ -247,22 +243,13 @@
       <property name="spacing">
        <number>0</number>
       </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>2</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
        <widget class="QFrame" name="frame">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -386,12 +373,30 @@
        </widget>
       </item>
       <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout">
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_13" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_17">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
-          <widget class="QPushButton" name="accumben_left">
+          <widget class="QPushButton" name="t2_average">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -402,13 +407,19 @@
              <height>25</height>
             </size>
            </property>
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
            <property name="text">
-            <string>Accumben, left</string>
+            <string>T2 average</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+1</string>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_5">
+          <spacer name="horizontalSpacer_32">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -424,7 +435,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="accumben_left_good">
+          <widget class="QRadioButton" name="t2_average_good">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -443,10 +454,16 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_1">
+          <spacer name="horizontalSpacer_33">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -462,7 +479,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="accumben_left_bad">
+          <widget class="QRadioButton" name="t2_average_bad">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -480,6 +497,12 @@
            </property>
            <property name="text">
             <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -487,12 +510,33 @@
        </widget>
       </item>
       <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget_2" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_14" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_18">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
-          <widget class="QPushButton" name="accumben_right">
+          <widget class="QPushButton" name="t1_average">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -504,12 +548,15 @@
             </size>
            </property>
            <property name="text">
-            <string>Accumben, right</string>
+            <string>T1 average</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+2</string>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_6">
+          <spacer name="horizontalSpacer_34">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -525,7 +572,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="accumben_right_good">
+          <widget class="QRadioButton" name="t1_average_good">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -544,10 +591,16 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_7">
+          <spacer name="horizontalSpacer_35">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -563,7 +616,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="accumben_right_bad">
+          <widget class="QRadioButton" name="t1_average_bad">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -581,6 +634,146 @@
            </property>
            <property name="text">
             <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_15" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_19">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="brain_mask">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Brain mask</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+3</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_36">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="brain_mask_good">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_37">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="brain_mask_bad">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -589,11 +782,32 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_3" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="caudate_left">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -606,6 +820,9 @@
            </property>
            <property name="text">
             <string>Caudate, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+4</string>
            </property>
           </widget>
          </item>
@@ -645,6 +862,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -683,6 +903,9 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -690,11 +913,29 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_4" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="caudate_right">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -707,6 +948,9 @@
            </property>
            <property name="text">
             <string>Caudate, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+4</string>
            </property>
           </widget>
          </item>
@@ -746,6 +990,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -784,18 +1031,42 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget_11" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_12">
+       <widget class="QEvaluationWidget" name="QEvaluationWidget" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
-          <widget class="QPushButton" name="globus_left">
+          <widget class="QPushButton" name="accumben_left">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -807,12 +1078,15 @@
             </size>
            </property>
            <property name="text">
-            <string>Globus, left</string>
+            <string>Accumben, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+5</string>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_24">
+          <spacer name="horizontalSpacer_5">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -828,7 +1102,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="globus_left_good">
+          <widget class="QRadioButton" name="accumben_left_good">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -847,10 +1121,13 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_25">
+          <spacer name="horizontalSpacer_1">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -866,7 +1143,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="globus_left_bad">
+          <widget class="QRadioButton" name="accumben_left_bad">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -885,18 +1162,39 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget_12" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_13">
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_2" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
-          <widget class="QPushButton" name="globus_right">
+          <widget class="QPushButton" name="accumben_right">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -908,12 +1206,15 @@
             </size>
            </property>
            <property name="text">
-            <string>Globus, right</string>
+            <string>Accumben, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+5</string>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_26">
+          <spacer name="horizontalSpacer_6">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -929,7 +1230,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="globus_right_good">
+          <widget class="QRadioButton" name="accumben_right_good">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -948,10 +1249,13 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_27">
+          <spacer name="horizontalSpacer_7">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -967,7 +1271,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QRadioButton" name="globus_right_bad">
+          <widget class="QRadioButton" name="accumben_right_bad">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -986,207 +1290,8 @@
            <property name="text">
             <string/>
            </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget_5" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QPushButton" name="hippocampus_left">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>30</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Hippocampus, left</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_12">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>31</width>
-             <height>25</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="hippocampus_left_good">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>25</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string notr="true"/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_13">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Fixed</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>25</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="hippocampus_left_bad">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>25</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QEvaluationWidget" name="QEvaluationWidget_6" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <item>
-          <widget class="QPushButton" name="hippocampus_right">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>30</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Hippocampus, right</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_14">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>31</width>
-             <height>25</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="hippocampus_right_good">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>25</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string notr="true"/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_15">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Fixed</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>25</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="hippocampus_right_bad">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>25</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
+           <property name="shortcut">
+            <string>Meta+B</string>
            </property>
           </widget>
          </item>
@@ -1195,11 +1300,32 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_7" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_8">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="putamen_left">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1212,6 +1338,9 @@
            </property>
            <property name="text">
             <string>Putamen, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+6</string>
            </property>
           </widget>
          </item>
@@ -1251,6 +1380,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -1289,6 +1421,9 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -1296,11 +1431,29 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_8" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_9">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="putamen_right">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1313,6 +1466,9 @@
            </property>
            <property name="text">
             <string>Putamen, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+6</string>
            </property>
           </widget>
          </item>
@@ -1352,6 +1508,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -1390,6 +1549,268 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_11" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_12">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="globus_left">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Globus, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Q</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_24">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="globus_left_good">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_25">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="globus_left_bad">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_12" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_13">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="globus_right">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Globus, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+Q</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_26">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="globus_right_good">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_27">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="globus_right_bad">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -1397,11 +1818,32 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_9" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="thalamus_left">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1414,6 +1856,9 @@
            </property>
            <property name="text">
             <string>Thalamus, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+W</string>
            </property>
           </widget>
          </item>
@@ -1453,6 +1898,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -1477,7 +1925,7 @@
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1491,6 +1939,9 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -1498,11 +1949,29 @@
       </item>
       <item>
        <widget class="QEvaluationWidget" name="QEvaluationWidget_10" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QPushButton" name="thalamus_right">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1515,6 +1984,9 @@
            </property>
            <property name="text">
             <string>Thalamus, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+W</string>
            </property>
           </widget>
          </item>
@@ -1554,6 +2026,9 @@
            <property name="text">
             <string notr="true"/>
            </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -1578,6 +2053,137 @@
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_5" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="hippocampus_left">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Hippocampus, left</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+E</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_12">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="hippocampus_left_good">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_13">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="hippocampus_left_bad">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
@@ -1592,6 +2198,137 @@
            <property name="text">
             <string/>
            </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QEvaluationWidget" name="QEvaluationWidget_6" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="hippocampus_right">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Hippocampus, right</string>
+           </property>
+           <property name="shortcut">
+            <string>Meta+Ctrl+E</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_14">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="hippocampus_right_good">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+G</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_15">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="hippocampus_right_bad">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="shortcut">
+            <string>Meta+B</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -1599,6 +2336,19 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>62</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

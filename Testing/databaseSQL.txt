@@ -40,9 +40,15 @@ CREATE TABLE image_reviews
 );
 
 INSERT INTO reviewers
-  ( first_name, last_name, login)
+  (first_name, last_name, login)
+VALUES
+  ('blank', 'blank', 'blank');
+
+INSERT INTO reviewers
+  (first_name, last_name, login)
 VALUES
   ('Test_first', 'Test_last', 'ttest');
+
 
 INSERT INTO derived_images
   (_analysis, _project, _subject, _session, location)
@@ -87,7 +93,7 @@ VALUES
 INSERT INTO image_reviews
   (record_id, reviewer_id, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
 VALUES
-  ((SELECT record_id FROM derived_images WHERE _session = '37022'), 'ttest', 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0);
+  ((SELECT record_id FROM derived_images WHERE _session = '37022'), 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0);
 
 INSERT INTO derived_images
   (_analysis, _project, _subject, _session, location, status)
@@ -97,4 +103,4 @@ VALUES
 INSERT INTO image_reviews
   (record_id, reviewer_id, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
 VALUES
-  ((SELECT record_id FROM derived_images WHERE _session = '37601'), 'ttest', 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1);
+  ((SELECT record_id FROM derived_images WHERE _session = '37601'), 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1);
