@@ -3,8 +3,8 @@ import os
 
 from __main__ import ctk
 from __main__ import qt
-import SimpleITK as sitk
-import sitkUtils
+#import SimpleITK as sitk
+#import sitkUtils
 from __main__ import slicer
 from __main__ import vtk
 
@@ -26,7 +26,7 @@ class SlicerDerivedImageEval:
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         # Register the regions and QA values
-        self.images = ('T2 image', 'T1 image', 'Brain mask' ) #T1 is second so that reviewers see it as background for regions
+        self.images = ('t2_average', 't1_average', 'mask_brain') #T1 is second so that reviewers see it as background for regions
         self.regions = ('caudate_left', 'caudate_right',
                         'accumben_left', 'accumben_right',
                         'putamen_left', 'putamen_right',
@@ -35,10 +35,9 @@ class SlicerDerivedImageEvalWidget:
                         'hippocampus_left', 'hippocampus_right')
         self.currentSession = None
         ###        self.sessionQLabel = None
-        ###        self.evalFrame = None
-        ###        self.pushButtons = {}
-        ###        self.radioButtons = {}
-        self.reviewButtons = {}
+        self.imageQAWidget = None
+        self.navigationWidget = None
+        self.followUpDialog = None
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
@@ -54,56 +53,48 @@ class SlicerDerivedImageEvalWidget:
             self.logic = SlicerDerivedImageEvalLogic(self)
 
     def setup(self):
+        self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
         # Batch navigation
-        batchNavigation = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
-        self.layout.addWidget(batchNavigation)
-        self.navigationWidget = batchNavigation.findChild("buttonContainerWidget")
-        ### TODO: Implement these buttons
-        self.batchListWidget = batchNavigation.findChild("listWidget")
-        ### self.previousButton = self.navigationWidget.findChild("QPushButton", "previousButton")
-        ### self.quitButton = self.navigationWidget.findChild("QPushButton", "quitButton")
-        ### self.nextButton = self.navigationWidget.findChild("QPushButton", "nextButton")
+        self.navigationWidget = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
+        nLayout = qt.QVBoxLayout(self.navigationWidget)
+        nLayout.addWidget(self.navigationWidget.findChild("QLabel", "batchLabel"))
+        nLayout.addWidget(self.navigationWidget.findChild("QListWidget", "batchList"))
+        nLayout.addWidget(self.navigationWidget.findChild("QWidget", "buttonContainerWidget"))
+        # Find navigation buttons
+        self.previousButton = self.navigationWidget.findChild("QPushButton", "previousButton")
+        self.quitButton = self.navigationWidget.findChild("QPushButton", "quitButton")
+        self.nextButton = self.navigationWidget.findChild("QPushButton", "nextButton")
+        self.connectSessionButtons()
         # Evaluation subsection
-        imageQA = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
-        self.layout.addWidget(imageQA)
-        qaLayout = qt.QVBoxLayout(imageQA)
-        qaLayout.addWidget(imageQA.findChild("QFrame", "titleFrame"))
-        qaLayout.addWidget(imageQA.findChild("QFrame", "tableVLine"))
-        ### def reviewButtonFactory(self):
-        for image in self.images:
-            reviewButtonsWidget = QEvaluationWidget(self.loadUIFile('Resources/UI/reviewButtonsWidget.ui'), image)
-            reviewButtonsWidget.setText(image)
-            qaLayout.addWidget(reviewButtonsWidget.widget)
-
-        for region in self.regions:
-            reviewButtonsWidget = QEvaluationWidget(self.loadUIFile('Resources/UI/reviewButtonsWidget.ui'), region)
-            reviewButtonsWidget.setText(region)
-            qaLayout.addWidget(reviewButtonsWidget.widget)
-
-        # self.radioButtons = self.evalFrame.findChildren('QRadioButton')
-        self.layout.addWidget(imageQA)
-        self.evaluationWidget = imageQA
+        self.imageQAWidget = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
+        qaLayout = qt.QVBoxLayout(self.imageQAWidget)
+        qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "titleFrame"))
+        qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "tableVLine"))
+        # Create review buttons on the fly
+        for image in self.images + self.regions:
+            reviewButton = self.reviewButtonFactory(image)
+            qaLayout.addWidget(reviewButton)
+        self.connectReviewButtons()
+        print "Adding to parent layout..."
         # resetButton
         self.resetButton = qt.QPushButton()
         self.resetButton.setText('Reset evaluation')
-        self.layout.addWidget(self.resetButton)
-        ### self.resetButton.connect('clicked(bool)', self.logic.onCancelButtonClicked)
+        self.resetButton.connect('clicked(bool)', self.resetWidget)
         # batch button
         self.batchButton = qt.QPushButton()
         self.batchButton.setText('Get evaluation batch')
-        self.layout.addWidget(self.batchButton)
-        ### self.batchButton.connect('clicked(bool)', self.logic.onGetBatchFilesClicked)
-        # session label
-        # self.sessionQLabel = self.evaluationCollapsibleButton.findChild('QLabel', 'sessionBoxedLabel')
-        # Connect push buttons
-        ### self.connectSessionButtons()
-        ### self.connectRegionButtons()
+        self.batchButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
+        # Add all to layout
+        self.layout.addWidget(self.navigationWidget)
+        nLayout.addWidget(self.resetButton)
+        nLayout.addWidget(self.batchButton)
+        self.layout.addWidget(self.imageQAWidget)
+        self.layout.addStretch(1)
         ### TESTING ###
         if True:
             self.logic.onGetBatchFilesClicked()
+            print "Setup finished."
         ### END ###
-        # Add vertical spacer
-        self.layout.addStretch(1)
 
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
@@ -115,66 +106,108 @@ class SlicerDerivedImageEvalWidget:
         finally:
             qfile.close()
 
+    def reviewButtonFactory(self, image):
+        widget = self.loadUIFile('Resources/UI/reviewButtonsWidget.ui')
+        # Set push button
+        pushButton = widget.findChild("QPushButton", "imageButton")
+        pushButton.objectName = image
+        pushButton.setText(self._formatText(image))
+        radioContainer = widget.findChild("QWidget", "radioWidget")
+        radioContainer.objectName = image + "_radioWidget"
+        # Set radio buttons
+        goodButton = widget.findChild("QRadioButton", "goodButton")
+        goodButton.objectName = image + "_good"
+        badButton = widget.findChild("QRadioButton", "badButton")
+        badButton.objectName = image + "_bad"
+        followUpButton = widget.findChild("QRadioButton", "followUpButton")
+        followUpButton.objectName = image + "_followUp"
+        return widget
+
+    def _formatText(self, text):
+        parsed = text.split("_")
+        if len(parsed) > 1:
+            text = " ".join([parsed[1].capitalize(), parsed[0]])
+        else:
+            text = parsed[0].capitalize()
+        return text
+
     def connectSessionButtons(self):
         """ Connect the session navigation buttons to their logic """
-        self.nextSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'nextButton')
-        self.nextSessionButton.connect('clicked()', self.logic.onNextButtonClicked)
-        self.previousSessionButton = self.evaluationCollapsibleButton.findChild('QPushButton', 'previousButton')
-        self.previousSessionButton.connect('clicked()', self.logic.onPreviousButtonClicked)
+        # self.nextButton.connect('clicked()', self.logic.onNextButtonClicked)
+        # self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
+        self.quitButton.connect('clicked()', self.exit)
 
-    def connectRegionButtons(self):
+    def connectReviewButtons(self):
         """ Map the region buttons clicked() signals to the function """
         self.buttonMapper = qt.QSignalMapper()
         self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
         self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
-        for region in self.regions:
-            self.pushButtons[region] = self.evaluationCollapsibleButton.findChild('QPushButton', region)
-            self.buttonMapper.setMapping(self.pushButtons[region], region)
-            self.pushButtons[region].connect('clicked()', self.buttonMapper, 'map()')
+        for image in self.images + self.regions:
+            pushButton = self.imageQAWidget.findChild('QPushButton', image)
+            self.buttonMapper.setMapping(pushButton, image)
+            pushButton.connect('clicked()', self.buttonMapper, 'map()')
 
-    def constructRadioButtonNames(self, buttonName):
-        """ LOGIC: Construct the radio button names, given the region push button name """
-        goodName = '_'.join([buttonName, 'good'])
-        badName = '_'.join([buttonName, 'bad'])
-        return goodName, badName
+    def enableRadios(self, image):
+        """ Enable the radio buttons that match the given region name """
+        self.imageQAWidget.findChild("QWidget", image + "_radioWidget").setEnabled(True)
+        for suffix in ("_good", "_bad", "_followUp"):
+            radio = self.imageQAWidget.findChild("QRadioButton", image + suffix)
+            radio.setShortcutEnabled(True)
+            radio.setCheckable(True)
+            radio.setEnabled(True)
 
-    def _findRadioButtons(self, buttonName):
-        """ Returns the QRadioButtons for the matching QPushButton """
-        goodName, badName = self.constructRadioButtonNames(buttonName)
-        goodRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', goodName)
-        badRadio = self.evaluationCollapsibleButton.findChild('QRadioButton', badName)
-        return goodRadio, badRadio
-
-    def enableRadios(self, buttonName):
-        """ Enable the radio buttons that match the given region push button """
-        goodRadio, badRadio = self._findRadioButtons(buttonName)
-        goodRadio.setEnabled(True)
-        badRadio.setEnabled(True)
-
-    def updateSessionQLabel(self):
-        self.sessionQLabel.setText(str(self.currentSession))
-        self.sessionQLabel.update()
+    def disableRadios(self, image):
+        """ Disable all radio buttons that DO NOT match the given region name """
+        radios = self.imageQAWidget.findChildren("QRadioButton")
+        for radio in radios:
+            if radio.objectName.find(image) == -1:
+                radio.setShortcutEnabled(False)
+                radio.setEnabled(False)
 
     def resetRadioWidgets(self):
         """ Disable and reset all radio buttons in the widget """
-        for button in self.radioButtons:
-            button.isChecked(False)
-            button.isEnabled(False)
+        radios = self.imageQAWidget.findChildren("QRadioButton")
+        for radio in radios:
+            radio.setCheckable(False)
+            radio.setEnabled(False)
+
+    def getRadioValues(self):
+        radios = self.imageQAWidget.findChildren("QRadioButton")
+        for radio in radios:
+            if radio.checked:
+                region = radio.objectName.rsplit("_good")[0].rsplit("_bad")[0].rsplit("_followUp")[0]
+                if radio.objectName.find("_good") > -1:
+                    print "Region %s is 1" % region
+                elif radio.objectName.find("_bad") > -1:
+                    print "Region %s is 0" % region
+                elif radio.objectName.find("_followUp") > -1:
+                    print "Region %s is -1" % region
+                else:
+                    print "Unknown value for region %s" % region
 
     def resetWidget(self):
+        self.getRadioValues()
         self.resetRadioWidgets()
-        self.updateSessionQLabel()
+
+    def onGetBatchFilesClicked(self):
+        self.resetWidget()
+        self.logic.onGetBatchFilesClicked()
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        pass
+        self.followUpDialog.show()
+        self.getRadioValues()
+        self.logic.exit()
 
 class SlicerDerivedImageEvalLogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self, widget):
         self.widget = widget
         self.regions = self.widget.regions
+        self.images = self.widget.images
         self.qaValueMap = {'good':'1', 'bad':'0', 'follow up':'-1'}
+        self.colorTable = "SPL-BrainAtlas-ColorFile"
+        self.colorTableNode = None
         self.user_id = None
         self.database = None
         self.batchList = None
@@ -183,12 +216,14 @@ class SlicerDerivedImageEvalLogic(object):
         self.count = 0 # Starting value
         self.maxCount = 0
         self.currentSession = None
+        self.currentValues = (None,)*len(self.images + self.regions)
         self.sessionFiles = {}
-        self.currentRecordID = None
         self.testing = True
         self.setup()
 
     def setup(self):
+        self.colorTableNode = slicer.util.getNode(self.colorTable)
+        self.createColorRegionMap()
         if self.testing:
             from database_helper import sqliteDatabase
             self.user_id = 'ttest'
@@ -199,19 +234,42 @@ class SlicerDerivedImageEvalLogic(object):
             self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
             # TODO: Handle password
 
+    def createColorRegionMap(self):
+        self.colorMap = {}
+        for region in self.regions:
+            anatomy, side = region.split("_")
+            for index in range(self.colorTableNode.GetNumberOfColors()):
+                colorName = self.colorTableNode.GetColorName(index)
+                if colorName.find(anatomy) > -1:
+                    if side == "left" and colorName.find("_L") > -1:
+                        self.colorMap[region] = colorName
+                        break
+                    elif side == "right" and colorName.find("_R") > -1:
+                        self.colorMap[region] = colorName
+                        break
+                    else:
+                        self.colorMap[region] = None
+        ### print self.colorMap
+
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene """
         nodeName = self.constructLabelNodeName(buttonName)
+        print "Getting node name %s" % nodeName
         labelNode = slicer.util.getNode(nodeName)
-        # Set the scene
-        compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
-        for compositeNode in compositeNodes.values():
-            compositeNode.SetLabelVolumeID(labelNode.GetID())
-            compositeNode.SetLabelOpacity(1.0)
-        # Set the label outline to ON
-        sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
-        for sliceNode in sliceNodes.values():
-            sliceNode.UseLabelOutlineOn()
+        ### labelDisplayNode = labelNode.Get
+        if labelNode.GetAttribute("LabelMap") == "1":
+            print "Found label map for %s" % buttonName
+            labelNode.GetDisplayNode().SetColor(self.colorTableNode.GetColor(self.colorMap[buttonName]))
+            compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
+            for compositeNode in compositeNodes.values():
+                compositeNode.SetLabelVolumeID(labelNode.GetID())
+                compositeNode.SetLabelOpacity(1.0)
+                # Set the label outline to ON
+                sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
+                for sliceNode in sliceNodes.values():
+                    sliceNode.UseLabelOutlineOn()
+        else:
+             self.loadBackgroundNodeToMRMLScene(labelNode)
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
@@ -263,6 +321,7 @@ class SlicerDerivedImageEvalLogic(object):
                                      str(row['_session']))
         sessionFiles['T1'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
         sessionFiles['T2'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+        sessionFiles['brain_mask'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
         for regionName in self.regions:
             fileName = self._getLabelFileNameFromRegion(regionName)
             sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
@@ -276,41 +335,44 @@ class SlicerDerivedImageEvalLogic(object):
         dataDialog = qt.QPushButton();
         dataDialog.setText('Loading files for session %s...' % self.currentSession);
         dataDialog.show()
+        volumeLogic = slicer.modules.volumes.logic()
         t1NodeName = '%s_t1_average' % self.currentSession
         t1VolumeNode = slicer.util.getNode(t1NodeName)
         if t1VolumeNode is None:
-            ### t1VolumeNode = slicer.util.loadVolume(self.sessionFiles['T1'], properties={'name':t1NodeName})
-            reader = sitk.ImageFileReader()
-            print self.sessionFiles['T1']
-            reader.SetFileName(self.sessionFiles['T1'])
-            t1Image = reader.Execute()
-            sitkUtils.PushToSlicer(t1Image, t1NodeName, False)
+            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['T1'], t1NodeName, 0)
             if slicer.util.getNode(t1NodeName) is None:
                 raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['T1'])
+            t1VolumeNode = slicer.util.getNode(t1NodeName)
+            t1VolumeNode.CreateDefaultDisplayNodes()
+            t1VolumeNode.GetDisplayNode().AutoWindowLevelOn()
         t2NodeName = '%s_t2_average' % self.currentSession
         t2VolumeNode = slicer.util.getNode(t2NodeName)
         if t2VolumeNode is None:
-            ### t1VolumeNode = slicer.util.loadVolume(self.sessionFiles['T1'], properties={'name':t1NodeName})
-            reader = sitk.ImageFileReader()
-            print self.sessionFiles['T2']
-            reader.SetFileName(self.sessionFiles['T2'])
-            t2Image = reader.Execute()
-            sitkUtils.PushToSlicer(t2Image, t2NodeName, True)
+            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['T2'], t2NodeName, 0)
             if slicer.util.getNode(t2NodeName) is None:
                 raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['T2'])
-        ### if slicer.util.getNode('%s_t2_average' % self.currentSession) is None:
-        ###     volumeNode = slicer.util.loadVolume(self.sessionFiles['T2'],
-        ###                                         properties={'name':"%s_t2_average" % self.currentSession})
+            t2VolumeNode = slicer.util.getNode(t2NodeName)
+            t2VolumeNode.CreateDefaultDisplayNodes()
+            t2VolumeNode.GetDisplayNode().AutoWindowLevelOn()
+        brainMaskNodeName = '%s_mask_brain' % self.currentSession
+        brainMaskNode = slicer.util.getNode(brainMaskNodeName)
+        if brainMaskNode is None:
+            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['brain_mask'], brainMaskNodeName, 1)
+            if slicer.util.getNode(brainMaskNodeName) is None:
+                raise IOError("Could not load session file for brain mask! File: %s" % self.sessionFiles['brain_mask'])
+            brainMaskNode = slicer.util.getNode(brainMaskNodeName)
+            brainMaskNode.CreateDefaultDisplayNodes()
+            # brainMaskNode.SetAndObserveColorNodeID(self.colorTableNode.GetID())
         for region in self.regions:
             regionNodeName = '%s_%s' % (self.currentSession, region)
-            if slicer.util.getNode(regionNodeName) is None:
-                ### slicer.util.loadLabelVolume(self.sessionFiles[region], properties={'name':regionNodeName})
-                reader = sitk.ImageFileReader()
-                reader.SetFileName(self.sessionFiles[region])
-                regionImage = reader.Execute()
-                sitkUtils.PushToSlicer(regionImage, regionNodeName, False)
-                collection = slicer.mrmlScene.GetNodesByName(regionNodeName)
-                regionNode = collection.GetItemAsObject(0).SetAttribute("LabelMap", "1")
+            regionNode = slicer.util.getNode(regionNodeName)
+            if regionNode is None:
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
+                if slicer.util.getNode(regionNodeName) is None:
+                    raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
+                regionNode = slicer.util.getNode(regionNodeName)
+                regionNode.CreateDefaultDisplayNodes()
+                ### regionNode.SetAndObserveColorNodeID(...)
         dataDialog.close()
 
     def loadBackgroundNodeToMRMLScene(self, volumeNode):
@@ -378,6 +440,17 @@ class SlicerDerivedImageEvalLogic(object):
         self.setCurrentSession()
         self.loadData()
 
+    def exit(self):
+        # if 'follow up' in currentValues.values():
+        #     followUpList = []
+        #     for key in currentValues.keys():
+        #         if currentValues[key] == self.qaValueMap['follow up']:
+        #             followUpList.append(key)
+        # Print list in dialog
+        dialog = self.widget.followUpDialog
+        # dialog.
+        pass
+
 class QEvaluationWidget(object):
     def __init__(self, widget, name=None):
         self.widget = widget
@@ -411,3 +484,7 @@ class QEvaluationWidget(object):
         for radio in radios:
             if radio.checked:
                 return radio ### TODO: Need to get at the identity here!
+
+    def connect(self, *args):
+        pushButton = self.widget.findChild("QPushButton")
+        pushButton.connect(*args)

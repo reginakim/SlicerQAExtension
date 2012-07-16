@@ -22,9 +22,6 @@
   <property name="text">
    <string>Image QA</string>
   </property>
-  <property name="shortcut">
-   <string>Meta+F</string>
-  </property>
   <widget class="QFrame" name="titleFrame">
    <property name="geometry">
     <rect>
