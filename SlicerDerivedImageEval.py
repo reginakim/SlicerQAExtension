@@ -54,6 +54,12 @@ class SlicerDerivedImageEvalWidget:
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
+        self.textEditor = self.followUpDialog.findChild("QTextEdit", "textEditor")
+        buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
+        # TODO
+        buttonBox.connect("accepted()", self.grabText)
+        # buttonBox.connect("rejected()", self.cancelAction)
+        #
         # Batch navigation
         self.navigationWidget = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
         nLayout = qt.QVBoxLayout(self.navigationWidget)
@@ -93,7 +99,6 @@ class SlicerDerivedImageEvalWidget:
         ### TESTING ###
         if True:
             self.logic.onGetBatchFilesClicked()
-            print "Setup finished."
         ### END ###
 
     def loadUIFile(self, fileName):
@@ -172,22 +177,37 @@ class SlicerDerivedImageEvalWidget:
             radio.setEnabled(False)
 
     def getRadioValues(self):
+        values = ()
+        needsFollowUp = False
         radios = self.imageQAWidget.findChildren("QRadioButton")
-        for radio in radios:
-            if radio.checked:
-                region = radio.objectName.rsplit("_good")[0].rsplit("_bad")[0].rsplit("_followUp")[0]
-                if radio.objectName.find("_good") > -1:
-                    print "Region %s is 1" % region
-                elif radio.objectName.find("_bad") > -1:
-                    print "Region %s is 0" % region
-                elif radio.objectName.find("_followUp") > -1:
-                    print "Region %s is -1" % region
-                else:
-                    print "Unknown value for region %s" % region
+        for image in self.images + self.regions:
+            for radio in radios:
+                if radio.objectName.find(region) > -1 and radio.checked:
+                    if radio.objectName.find("_good") > -1:
+                        values = values + (1,)
+                    elif radio.objectName.find("_bad") > -1:
+                        values = values + (0,)
+                    elif radio.objectName.find("_followUp") > -1:
+                        values = values + (-1,)
+                        needsFollowUp = True
+                    else:
+                        values = values + (None,)
+        if needsFollowUp:
+            self.followUpDialog.show()
+            if not self.notes is None:
+                values = values + (self.notes,)
+        else:
+            values = values + (None,)
+        self.logic.writeToDatabase(values)
 
     def resetWidget(self):
         self.getRadioValues()
         self.resetRadioWidgets()
+
+    def grabText(self):
+        self.notes = None
+        self.notes = self.textEditor.toPlainText()
+        print self.notes
 
     def onGetBatchFilesClicked(self):
         self.resetWidget()
@@ -282,7 +302,7 @@ class SlicerDerivedImageEvalLogic(object):
     def writeToDatabase(self, evaluations):
         values = (self.batchRows[self.count]['record_id'], self.user_id)
         values = values + evaluations
-        columns = ('record_id', 'reviewer_id') + self.regions
+        columns = ('record_id', 'reviewer_id') + self.images + self.regions + ('notes',)
         self.database.writeAndUnlockRecord(columns, values)
 
     def _getLabelFileNameFromRegion(self, regionName):
