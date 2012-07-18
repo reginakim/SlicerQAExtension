@@ -26,8 +26,9 @@ class SlicerDerivedImageEval:
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         # Register the regions and QA values
-        self.images = ('t2_average', 't1_average', 'mask_brain') #T1 is second so that reviewers see it as background for regions
-        self.regions = ('caudate_left', 'caudate_right',
+        self.images = ('t2_average', 't1_average') #T1 is second so that reviewers see it as background for regions
+        self.regions = ('mask_brain',
+                        'caudate_left', 'caudate_right',
                         'accumben_left', 'accumben_right',
                         'putamen_left', 'putamen_right',
                         'globus_left', 'globus_right',
@@ -38,6 +39,7 @@ class SlicerDerivedImageEvalWidget:
         self.imageQAWidget = None
         self.navigationWidget = None
         self.followUpDialog = None
+        self.notes = None
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
@@ -81,7 +83,6 @@ class SlicerDerivedImageEvalWidget:
             reviewButton = self.reviewButtonFactory(image)
             qaLayout.addWidget(reviewButton)
         self.connectReviewButtons()
-        print "Adding to parent layout..."
         # resetButton
         self.resetButton = qt.QPushButton()
         self.resetButton.setText('Reset evaluation')
@@ -182,22 +183,23 @@ class SlicerDerivedImageEvalWidget:
         radios = self.imageQAWidget.findChildren("QRadioButton")
         for image in self.images + self.regions:
             for radio in radios:
-                if radio.objectName.find(region) > -1 and radio.checked:
+                if radio.objectName.find(image) > -1 and radio.checked:
                     if radio.objectName.find("_good") > -1:
-                        values = values + (1,)
+                        values = values + ("1",)
                     elif radio.objectName.find("_bad") > -1:
-                        values = values + (0,)
+                        values = values + ("0",)
                     elif radio.objectName.find("_followUp") > -1:
-                        values = values + (-1,)
+                        values = values + ("-1",)
                         needsFollowUp = True
                     else:
-                        values = values + (None,)
+                        values = values + ("NULL",)
+                        print "Warning: No value for %s" % image
         if needsFollowUp:
             self.followUpDialog.show()
             if not self.notes is None:
                 values = values + (self.notes,)
         else:
-            values = values + (None,)
+            values = values + ("NULL",)
         self.logic.writeToDatabase(values)
 
     def resetWidget(self):
@@ -215,7 +217,6 @@ class SlicerDerivedImageEvalWidget:
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        self.followUpDialog.show()
         self.getRadioValues()
         self.logic.exit()
 
@@ -226,7 +227,7 @@ class SlicerDerivedImageEvalLogic(object):
         self.regions = self.widget.regions
         self.images = self.widget.images
         self.qaValueMap = {'good':'1', 'bad':'0', 'follow up':'-1'}
-        self.colorTable = "SPL-BrainAtlas-ColorFile"
+        self.colorTable = "IPL-BrainAtlas-ColorFile.txt"
         self.colorTableNode = None
         self.user_id = None
         self.database = None
@@ -242,8 +243,8 @@ class SlicerDerivedImageEvalLogic(object):
         self.setup()
 
     def setup(self):
-        self.colorTableNode = slicer.util.getNode(self.colorTable)
-        self.createColorRegionMap()
+        self.createColorTable()
+        # self.createColorRegionMap()
         if self.testing:
             from database_helper import sqliteDatabase
             self.user_id = 'ttest'
@@ -253,6 +254,20 @@ class SlicerDerivedImageEvalLogic(object):
             self.user_id = os.environ['USER']
             self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
             # TODO: Handle password
+
+    def createColorTable(self):
+        """
+        """
+        self.colorTableNode = slicer.vtkMRMLColorTableNode()
+        self.colorTableNode.SetFileName(os.path.join(__file__, 'Resources', 'ColorFile', self.colorTable))
+        self.colorTableNode.SetName(self.colorTable[:-4])
+        storage = self.colorTableNode.CreateDefaultStorageNode()
+        slicer.mrmlScene.AddNode(storage)
+        self.colorTableNode.AddAndObserveStorageNodeID(storage.GetID())
+        slicer.mrmlScene.AddNode(self.colorTableNode)
+        storage.SetFileName(self.colorTableNode.GetFileName())
+        storage.SetReadState(True)
+        storage.ReadData(self.colorTableNode, True)
 
     def createColorRegionMap(self):
         self.colorMap = {}
@@ -268,21 +283,40 @@ class SlicerDerivedImageEvalLogic(object):
                         self.colorMap[region] = colorName
                         break
                     else:
-                        self.colorMap[region] = None
-        ### print self.colorMap
+                        self.colorMap[region] = colorName ### BUG: brain mask colors WILL NOT match up with regions
+        print self.colorMap
+
+    def addEntryToColorTable(self, buttonName):
+        lTable = self.colorTableNode.GetLookupTable()
+        colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)#self.colorMap[buttonName])
+        color = lTable.GetTableValue(colorIndex)
+        self.colorTableNode.AddColor(buttonName, *color)
 
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene """
         nodeName = self.constructLabelNodeName(buttonName)
         labelNode = slicer.util.getNode(nodeName)
-        ### labelDisplayNode = labelNode.Get
         if labelNode.GetLabelMap():
-            labelNode.GetDisplayNode().SetColor(self.colorTableNode.GetColor(self.colorMap[buttonName]))
+            # if buttonName != "mask_brain":
+            #     print buttonName
+            #     self.addEntryToColorTable(buttonName)
+            # else:
+            #     print "Mask found! %s" % buttonName
+            #     for region in self.regions[1:]:
+            #         self.selectRegion(region)
+            ########################################
+            #     lTable = self.colorTableNode.GetLookupTable()
+            #     colorIndex = self.colorTableNode.GetColorIndexByName(self.colorMap[buttonName])
+            #     color = lTable.GetTableValue(colorIndex)
+            #     labelNode.GetDisplayNode().SetColor(color[0:3])
+            # else:
+            labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
+            #
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
                 compositeNode.SetLabelOpacity(1.0)
-                # Set the label outline to ON
+            # Set the label outline to ON
             sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
             for sliceNode in sliceNodes.values():
                 sliceNode.UseLabelOutlineOn()
@@ -339,10 +373,12 @@ class SlicerDerivedImageEvalLogic(object):
                                      str(row['_session']))
         sessionFiles['T1'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
         sessionFiles['T2'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
-        sessionFiles['brain_mask'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
         for regionName in self.regions:
-            fileName = self._getLabelFileNameFromRegion(regionName)
-            sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+            if regionName == 'mask_brain':
+                sessionFiles['mask_brain'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
+            else:
+                fileName = self._getLabelFileNameFromRegion(regionName)
+                sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
         sessionFiles['session'] = str(row['_session'])
         sessionFiles['record_id'] = str(row['record_id'])
         self.sessionFiles = sessionFiles
@@ -372,15 +408,6 @@ class SlicerDerivedImageEvalLogic(object):
             t2VolumeNode = slicer.util.getNode(t2NodeName)
             t2VolumeNode.CreateDefaultDisplayNodes()
             t2VolumeNode.GetDisplayNode().AutoWindowLevelOn()
-        brainMaskNodeName = '%s_mask_brain' % self.currentSession
-        brainMaskNode = slicer.util.getNode(brainMaskNodeName)
-        if brainMaskNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['brain_mask'], brainMaskNodeName, 1)
-            if slicer.util.getNode(brainMaskNodeName) is None:
-                raise IOError("Could not load session file for brain mask! File: %s" % self.sessionFiles['brain_mask'])
-            brainMaskNode = slicer.util.getNode(brainMaskNodeName)
-            brainMaskNode.CreateDefaultDisplayNodes()
-            # brainMaskNode.SetAndObserveColorNodeID(self.colorTableNode.GetID())
         for region in self.regions:
             regionNodeName = '%s_%s' % (self.currentSession, region)
             regionNode = slicer.util.getNode(regionNodeName)
@@ -389,8 +416,9 @@ class SlicerDerivedImageEvalLogic(object):
                 if slicer.util.getNode(regionNodeName) is None:
                     raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
                 regionNode = slicer.util.getNode(regionNodeName)
-                regionNode.CreateDefaultDisplayNodes()
-                ### regionNode.SetAndObserveColorNodeID(...)
+                displayNode = slicer.vtkMRMLLabelMapVolumeDisplayNode()
+                slicer.mrmlScene.AddNode(displayNode)
+                regionNode.SetAndObserveNthDisplayNodeID(0, displayNode.GetID())
         dataDialog.close()
 
     def loadBackgroundNodeToMRMLScene(self, volumeNode):

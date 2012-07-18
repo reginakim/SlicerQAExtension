@@ -27,7 +27,8 @@ set(MODULE_PYTHON_SCRIPTS
   )
 
 set(MODULE_PYTHON_RESOURCES
-  database.csv
+  database_helper.py
+  module_locator.py
   )
 
 #-----------------------------------------------------------------------------

@@ -37,6 +37,7 @@ CREATE TABLE image_reviews
   putamen_left INTEGER NOT NULL,
   thalamus_right INTEGER NOT NULL,
   thalamus_left INTEGER NOT NULL,
+  notes BLOB,
   review_time TIMESTAMP,
   FOREIGN KEY (record_id) REFERENCES derived_images(record_id),
   FOREIGN KEY (reviewer_id) REFERENCES reviewers(reviewer_id)

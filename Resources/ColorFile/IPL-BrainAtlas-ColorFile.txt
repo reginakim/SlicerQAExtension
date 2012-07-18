@@ -1,0 +1,16 @@
+# This file is a convienence file for the module.
+#
+#Begin table data:
+0 Background 0 0 0 0
+1 accumben_left 0 255 255 255
+2 accumben_right 0 127 127 255
+3 caudate_left 255 0 255 255
+4 caudate_right 127 0 127 255
+5 globus_left 255 255 0 255
+6 globus_right 127 127 0 255
+7 hippocampus_left 0 0 255 255
+8 hippocampus_right 0 0 127 255
+9 putamen_left 0 255 0 255
+10 putamen_right 0 127 0 255
+11 thalamus_left 255 0 0 255
+12 thalamus_right 127 0 0 255

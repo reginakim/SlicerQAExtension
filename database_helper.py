@@ -83,8 +83,15 @@ class sqliteDatabase(object):
 
     def writeAndUnlockRecord(self, columns, values):
         self.openDatabase()
-        columnString = ', '.join(('reviewer_id',) + columns)
-        valueString = ', '.join((str(self.reviewer_id[0]),) + values)
+        try:
+            columnString = ', '.join(('reviewer_id',) + columns)
+            valueString = ', '.join((str(self.reviewer_id[0]),) + values)
+        except TypeError:
+            print columns
+            print values
+            raise
+        finally:
+            self.closeDatabase()
         # for value in values:
         #     valueString = valueString + ('?',)
         # valuesString = ', '.join(valueString)
@@ -208,7 +215,7 @@ class postgresDatabase(object):
         sqlCommand = "INSERT INTO image_reviews ({0}) VALUES ({1})".format(columnString, valueString)
         print sqlCommand
         try:
-            self.cursor..execute(sqlCommand)
+            self.cursor.execute(sqlCommand)
             self.cursor.execute("UPDATE derived_images \
                                  SET status='R' \
                                  WHERE record_id=? AND status='L'", (values[1],))
