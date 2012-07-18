@@ -254,20 +254,18 @@ class SlicerDerivedImageEvalLogic(object):
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene """
         nodeName = self.constructLabelNodeName(buttonName)
-        print "Getting node name %s" % nodeName
         labelNode = slicer.util.getNode(nodeName)
         ### labelDisplayNode = labelNode.Get
-        if labelNode.GetAttribute("LabelMap") == "1":
-            print "Found label map for %s" % buttonName
+        if labelNode.GetLabelMap():
             labelNode.GetDisplayNode().SetColor(self.colorTableNode.GetColor(self.colorMap[buttonName]))
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
                 compositeNode.SetLabelOpacity(1.0)
                 # Set the label outline to ON
-                sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
-                for sliceNode in sliceNodes.values():
-                    sliceNode.UseLabelOutlineOn()
+            sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
+            for sliceNode in sliceNodes.values():
+                sliceNode.UseLabelOutlineOn()
         else:
              self.loadBackgroundNodeToMRMLScene(labelNode)
 
@@ -450,41 +448,3 @@ class SlicerDerivedImageEvalLogic(object):
         dialog = self.widget.followUpDialog
         # dialog.
         pass
-
-class QEvaluationWidget(object):
-    def __init__(self, widget, name=None):
-        self.widget = widget
-        self.name = name
-
-    def name(self):
-        return self.name
-
-    def setName(self, name):
-        """ Set name value for class """
-        self.name = name
-
-    def _formatName(self, text):
-        parsed = self.name.split("_")
-        if len(parsed) > 1:
-            pushText = " ".join([parsed[1].capitalize(), parsed[0]])
-        else:
-            pushText = parsed[0].capitalize()
-        return pushText
-
-    def setText(self, text):
-        pushButton = self.widget.findChild("QPushButton")
-        pushButton.setText(self._formatName(text))
-
-    def text(self):
-        pushButton = self.widget.findChild("QPushButton")
-        return pushButton.text
-
-    def getValue(self):
-        radios = self.widget.findChildren("QRadioButton")
-        for radio in radios:
-            if radio.checked:
-                return radio ### TODO: Need to get at the identity here!
-
-    def connect(self, *args):
-        pushButton = self.widget.findChild("QPushButton")
-        pushButton.connect(*args)

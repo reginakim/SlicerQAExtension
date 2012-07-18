@@ -9,7 +9,6 @@ class sqliteDatabase(object):
         during evaluations
 
     """
-
     def __init__(self, login, arraySize):
         import sqlite3
         globals()['sql'] = sqlite3
@@ -108,9 +107,13 @@ class sqliteDatabase(object):
 
 
 class postgresDatabase(object):
-    """ """
+    """ Connect to the Postgres database and prevent multiple user collisions
+        during simultaneous evaluations
+
+    """
     def __init__(self, host, port, database, user, password=None, login=None, arraySize=1):
-        import psycopg2 as sql
+        import psycopg2
+        globals()['sql'] = psycopg2
         self.host = host
         self.port = port
         self.database = database
@@ -118,10 +121,97 @@ class postgresDatabase(object):
         self.password = password
         self.reviewer_login = login
         self.arraySize = arraySize
+        self.connection = None
+        self.cursor = None
+        self.getReviewerID()
+        self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     def openDatabase(self):
-        connnection = sql.connect(host=self.host, port=self.port,
-                                  database=self.database, user=self.user,
-                                  password=self.password)
+        """ Open the database and create cursor and connection
+        """
+        self.connnection = sql.connect(host=self.host,
+                                       port=self.port,
+                                       database=self.database,
+                                       user=self.user,
+                                       password=self.password)
         self.cursor = self.connection.cursor()
         self.cursor.arraysize = self.arraySize
+        self.cursor.cursor_factory = sql.extras.DictCursor
+
+    def closeDatabase(self):
+        """ Close cursor and connection, setting values to None
+        """
+        self.cursor.close()
+        self.cursor = None
+        self.connection.close()
+        self.connection = None
+
+    def getReviewerID(self):
+        """ Using the database login name, get the reviewer_id key from the reviewers table
+        """
+        self.openDatabase()
+        self.cursor.execute("SELECT reviewer_id FROM reviewers \
+                             WHERE login=?", (self.reviewer_login,))
+        self.reviewer_id = self.cursor.fetchone()
+        self.closeDatabase()
+
+    def getBatch(self):
+        """ Return a dictionary of rows where the number of rows == self.arraySize and status == 'U'
+        """
+        self.cursor.execute("SELECT * \
+                            FROM derived_images \
+                            WHERE status = 'U'")
+        rows = self.cursor.fetchmany()
+        if not rows:
+            raise warnings.warn("No rows were status == 'U' were found!")
+        return rows
+
+    def lockBatch(self, rows):
+        """ Set the status of all batch members to 'L'
+            Arguments:
+            - `rows`: The dictionary-like list of rows resulting from a call to the cursor.fetchmany()
+        """
+        ids = ()
+        idString = ""
+        for row in rows:
+            ids = ids + (str(row['record_id']),)
+        idString = ', '.join(ids)
+        sqlCommand = "UPDATE derived_images \
+                      SET status='L' \
+                      WHERE record_id IN ({0})".format(idString)
+        self.cursor.execute(sqlCommand)
+        self.connection.commit()
+
+    def lockAndReadRecords(self):
+        """ Find a given number of records with status == 'U', set the status to 'L', and return the records in a dictionary-like object
+        """
+        self.openDatabase()
+        try:
+            rows = self.getBatch()
+            self.lockBatch(rows)
+        finally:
+            self.closeDatabase()
+        return rows
+
+    def writeAndUnlockRecord(self, columns, values):
+        """ Open the database, insert the evaluation values into the image_reviews table, and update the status == 'R' for the record_id
+            Arguments:
+            - `columns`: a tuple of columns from the image_reviews table, minus 'reviewer_id'
+            - `values`: a tuple of the corresponding values for the columns tuple
+        """
+        self.openDatabase()
+        columnString = ', '.join(('reviewer_id',) + columns)
+        valueString = ', '.join((str(self.reviewer_id[0]),) + values)
+        # for value in values:
+        #     valueString = valueString + ('?',)
+        # valuesString = ', '.join(valueString)
+        sqlCommand = "INSERT INTO image_reviews ({0}) VALUES ({1})".format(columnString, valueString)
+        print sqlCommand
+        try:
+            self.cursor..execute(sqlCommand)
+            self.cursor.execute("UPDATE derived_images \
+                                 SET status='R' \
+                                 WHERE record_id=? AND status='L'", (values[1],))
+            self.connection.commit()
+        finally:
+            self.closeDatabase()
