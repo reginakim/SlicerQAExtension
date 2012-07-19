@@ -27,7 +27,7 @@ class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         # Register the regions and QA values
         self.images = ('t2_average', 't1_average') #T1 is second so that reviewers see it as background for regions
-        self.regions = ('mask_brain',
+        self.regions = ('labels_tissue',
                         'caudate_left', 'caudate_right',
                         'accumben_left', 'accumben_right',
                         'putamen_left', 'putamen_right',
@@ -56,11 +56,12 @@ class SlicerDerivedImageEvalWidget:
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
+        self.clipboard = qt.QApplication.clipboard()
         self.textEditor = self.followUpDialog.findChild("QTextEdit", "textEditor")
         buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
         # TODO
-        buttonBox.connect("accepted()", self.grabText)
-        # buttonBox.connect("rejected()", self.cancelAction)
+        buttonBox.connect("accepted()", self.grabNotes)
+        buttonBox.connect("rejected()", self.cancelNotes)
         #
         # Batch navigation
         self.navigationWidget = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
@@ -195,29 +196,51 @@ class SlicerDerivedImageEvalWidget:
                         values = values + ("NULL",)
                         print "Warning: No value for %s" % image
         if needsFollowUp:
-            self.followUpDialog.show()
-            if not self.notes is None:
+            self.followUpDialog.exec_()
+            if self.followUpDialog.result() and not self.notes is None:
                 values = values + (self.notes,)
+            else:
+                values = values + ("NULL",)
         else:
             values = values + ("NULL",)
-        self.logic.writeToDatabase(values)
+        return values
 
     def resetWidget(self):
-        self.getRadioValues()
+        # self.getRadioValues()
         self.resetRadioWidgets()
 
-    def grabText(self):
+    def grabNotes(self):
         self.notes = None
-        self.notes = self.textEditor.toPlainText()
-        print self.notes
+        self.notes = str(self.textEditor.toPlainText())
+        # if self.notes = '':
+        #     self.followUpDialog.show()
+        #     self.textEditor.setText("A comment is required!")
+        self.textEditor.clear()
+
+    def cancelNotes(self):
+        # TODO:
+        pass
 
     def onGetBatchFilesClicked(self):
+        values = self.getRadioValues()
+        if len(values) >= len(self.images + self.regions):
+            self.logic.writeToDatabase(values)
+        else:
+            # TODO: Handle this case intelligently
+            print "Not enough values for the required columns!"
+            raise Exception
         self.resetWidget()
         self.logic.onGetBatchFilesClicked()
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        self.getRadioValues()
+        values = self.getRadioValues()
+        if len(values) >= len(self.images + self.regions):
+            self.logic.writeToDatabase(values)
+        else:
+            # TODO: Handle this case intelligently
+            print "Not enough values for the required columns!"
+            raise Exception
         self.logic.exit()
 
 class SlicerDerivedImageEvalLogic(object):
@@ -232,7 +255,7 @@ class SlicerDerivedImageEvalLogic(object):
         self.user_id = None
         self.database = None
         self.batchList = None
-        self.batchSize = 3
+        self.batchSize = 1
         self.batchRows = None
         self.count = 0 # Starting value
         self.maxCount = 0
@@ -297,7 +320,7 @@ class SlicerDerivedImageEvalLogic(object):
         nodeName = self.constructLabelNodeName(buttonName)
         labelNode = slicer.util.getNode(nodeName)
         if labelNode.GetLabelMap():
-            # if buttonName != "mask_brain":
+            # if buttonName != "labels_tissue":
             #     print buttonName
             #     self.addEntryToColorTable(buttonName)
             # else:
@@ -334,10 +357,14 @@ class SlicerDerivedImageEvalLogic(object):
         print "Cancelled!"
 
     def writeToDatabase(self, evaluations):
-        values = (self.batchRows[self.count]['record_id'], self.user_id)
-        values = values + evaluations
-        columns = ('record_id', 'reviewer_id') + self.images + self.regions + ('notes',)
-        self.database.writeAndUnlockRecord(columns, values)
+        recordID = str(self.batchRows[self.count]['record_id'])
+        values = (recordID,) + evaluations
+        try:
+            self.database.writeAndUnlockRecord(values)
+        except:
+            # TODO: Prompt user with popup
+            print "Error writing to database!"
+            raise
 
     def _getLabelFileNameFromRegion(self, regionName):
         try:
@@ -374,8 +401,8 @@ class SlicerDerivedImageEvalLogic(object):
         sessionFiles['T1'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
         sessionFiles['T2'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
-            if regionName == 'mask_brain':
-                sessionFiles['mask_brain'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
+            if regionName == 'labels_tissue':
+                sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
             else:
                 fileName = self._getLabelFileNameFromRegion(regionName)
                 sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
@@ -493,6 +520,6 @@ class SlicerDerivedImageEvalLogic(object):
         #         if currentValues[key] == self.qaValueMap['follow up']:
         #             followUpList.append(key)
         # Print list in dialog
-        dialog = self.widget.followUpDialog
+        # dialog = self.widget.followUpDialog
         # dialog.
         pass

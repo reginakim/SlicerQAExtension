@@ -24,7 +24,7 @@ CREATE TABLE image_reviews
   reviewer_id INTEGER NOT NULL,
   t1_average INTEGER NOT NULL,
   t2_average INTEGER NOT NULL,
-  mask_brain INTEGER NOT NULL,
+  labels_tissue INTEGER NOT NULL,
   accumben_right INTEGER NOT NULL,
   accumben_left INTEGER NOT NULL,
   caudate_right INTEGER NOT NULL,
@@ -95,7 +95,7 @@ VALUES
   ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0241', '37022', '/paulsen/Experiments', 'R');
 
 INSERT INTO image_reviews
-  (record_id, reviewer_id, t2_average, t1_average, mask_brain, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
+  (record_id, reviewer_id, t2_average, t1_average, labels_tissue, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
 VALUES
   ((SELECT record_id FROM derived_images WHERE _session = '37022'), 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0);
 
@@ -105,6 +105,6 @@ VALUES
   ('B4AUTO.20120524_Results', 'FMRI_HD_024', '0241', '37601', '/paulsen/Experiments', 'R');
 
 INSERT INTO image_reviews
-  (record_id, reviewer_id, t2_average, t1_average, mask_brain, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
+  (record_id, reviewer_id, t2_average, t1_average, labels_tissue, accumben_right, accumben_left, caudate_right, caudate_left, globus_left, globus_right, hippocampus_right, hippocampus_left, putamen_right, putamen_left, thalamus_right, thalamus_left)
 VALUES
   ((SELECT record_id FROM derived_images WHERE _session = '37601'), 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0);

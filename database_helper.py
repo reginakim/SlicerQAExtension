@@ -81,28 +81,35 @@ class sqliteDatabase(object):
             self.closeDatabase()
         return rows
 
-    def writeAndUnlockRecord(self, columns, values):
+    def writeAndUnlockRecord(self, values):
         self.openDatabase()
+        reviewerID = self.reviewer_id[0]
         try:
-            columnString = ', '.join(('reviewer_id',) + columns)
-            valueString = ', '.join((str(self.reviewer_id[0]),) + values)
-        except TypeError:
-            print columns
-            print values
-            raise
-        finally:
-            self.closeDatabase()
-        # for value in values:
-        #     valueString = valueString + ('?',)
-        # valuesString = ', '.join(valueString)
-        sqlCommand = "INSERT INTO image_reviews ({0}) VALUES ({1});".format(columnString, valueString)
-        print sqlCommand
-        try:
-            self.connection.executescript(sqlCommand)
+            valueString = ("?, " * (len(values) + 1))[:-2]
+            if len(values) == 17:
+                sqlCommand = "INSERT INTO image_reviews \
+                              ('record_id', 't2_average', 't1_average', \
+                               'labels_tissue', 'caudate_left', 'caudate_right', \
+                               'accumben_left', 'accumben_right', 'putamen_left', \
+                               'putamen_right', 'globus_left', 'globus_right', \
+                               'thalamus_left', 'thalamus_right', 'hippocampus_left', \
+                               'hippocampus_right', 'notes', 'reviewer_id'\
+                               ) VALUES (%s)" % valueString
+            elif len(values) == 16:
+                # No notes
+                print "No notes???"
+            print sqlCommand
+            self.cursor.execute(sqlCommand, values + (reviewerID,))
             self.cursor.execute("UPDATE derived_images \
                                  SET status='R' \
-                                 WHERE record_id=? AND status='L'", (values[1],))
+                                 WHERE record_id=? AND status='L'", (values[0],))
             self.connection.commit()
+        except:
+            print columns + ('reviewer_id',)
+            print "Column length: %d" % len(columns + ('reviewer_id',))
+            print values + (reviewerID,)
+            print "Value length: %d" % len(values + (reviewerID,))
+            raise
         finally:
             self.closeDatabase()
 
