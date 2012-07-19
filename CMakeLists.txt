@@ -24,11 +24,12 @@ endif()
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   SlicerDerivedImageEval.py
+  database_helper.py
+  module_locator.py
   )
 
 set(MODULE_PYTHON_RESOURCES
-  database_helper.py
-  module_locator.py
+  Python/pg8000/__init__.py
   )
 
 #-----------------------------------------------------------------------------

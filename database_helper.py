@@ -12,6 +12,7 @@ class sqliteDatabase(object):
     def __init__(self, login, arraySize):
         import sqlite3
         globals()['sql'] = sqlite3
+        self.rows = None
         self.database = None
         self.isolation_level = "EXCLUSIVE"
         self.connection = None
@@ -56,16 +57,15 @@ class sqliteDatabase(object):
         self.cursor.execute("SELECT * \
                             FROM derived_images \
                             WHERE status = 'U'")
-        rows = self.cursor.fetchmany()
-        if not rows:
+        self.rows = self.cursor.fetchmany()
+        if not self.rows:
             raise warnings.warn("No rows were status == 'U' were found!")
-        return rows
 
-    def lockBatch(self, rows):
+    def lockBatch(self):
         # Lock batch members
         ids = ()
         idString = ""
-        for row in rows:
+        for row in self.rows:
             ids = ids + (str(row['record_id']),)
         idString = ', '.join(ids)
         sqlCommand = "UPDATE derived_images SET status='L' WHERE record_id IN ({0});".format(idString)
@@ -75,11 +75,11 @@ class sqliteDatabase(object):
     def lockAndReadRecords(self):
         self.openDatabase()
         try:
-            rows = self.getBatch()
-            self.lockBatch(rows)
+            self.getBatch()
+            self.lockBatch()
         finally:
             self.closeDatabase()
-        return rows
+        return self.rows
 
     def writeAndUnlockRecord(self, values):
         self.openDatabase()
@@ -105,8 +105,6 @@ class sqliteDatabase(object):
                                  WHERE record_id=? AND status='L'", (values[0],))
             self.connection.commit()
         except:
-            print columns + ('reviewer_id',)
-            print "Column length: %d" % len(columns + ('reviewer_id',))
             print values + (reviewerID,)
             print "Value length: %d" % len(values + (reviewerID,))
             raise
@@ -126,8 +124,20 @@ class postgresDatabase(object):
 
     """
     def __init__(self, host, port, database, user, password=None, login=None, arraySize=1):
-        import psycopg2
-        globals()['sql'] = psycopg2
+        try:
+            import pg8000
+        except ImportError:
+            ### Hack to import pg8000 locally
+            import os
+            import sys
+            pg8kDir = [os.path.join(__file__, 'Resources', 'Python', 'pg8000-1.08')]
+            newSysPath = pg8kDir + sys.path
+            print "+++++++++++++++++++++"
+            sys.path = newSysPath
+            import pg8000
+        globals()['sql'] = pg8000.DBAPI
+        sql.paramstyle = "qmark"
+        self.rows = None
         self.host = host
         self.port = port
         self.database = database
@@ -137,20 +147,19 @@ class postgresDatabase(object):
         self.arraySize = arraySize
         self.connection = None
         self.cursor = None
-        self.getReviewerID()
-        self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
+        # self.getReviewerID()
+        # self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     def openDatabase(self):
         """ Open the database and create cursor and connection
         """
-        self.connnection = sql.connect(host=self.host,
-                                       port=self.port,
-                                       database=self.database,
-                                       user=self.user,
-                                       password=self.password)
+        self.connection = sql.connect(host=self.host,
+                                      port=self.port,
+                                      database=self.database,
+                                      user=self.user,
+                                      password=self.password)
         self.cursor = self.connection.cursor()
         self.cursor.arraysize = self.arraySize
-        self.cursor.cursor_factory = sql.extras.DictCursor
 
     def closeDatabase(self):
         """ Close cursor and connection, setting values to None
@@ -166,7 +175,7 @@ class postgresDatabase(object):
         self.openDatabase()
         self.cursor.execute("SELECT reviewer_id FROM reviewers \
                              WHERE login=?", (self.reviewer_login,))
-        self.reviewer_id = self.cursor.fetchone()
+        self.reviewer_id = self.cursor.fetchone()[0]
         self.closeDatabase()
 
     def getBatch(self):
@@ -175,57 +184,90 @@ class postgresDatabase(object):
         self.cursor.execute("SELECT * \
                             FROM derived_images \
                             WHERE status = 'U'")
-        rows = self.cursor.fetchmany()
-        if not rows:
+        self.rows = self.cursor.fetchmany()
+        if not self.rows:
             raise warnings.warn("No rows were status == 'U' were found!")
-        return rows
 
-    def lockBatch(self, rows):
+    def lockBatch(self):
         """ Set the status of all batch members to 'L'
-            Arguments:
-            - `rows`: The dictionary-like list of rows resulting from a call to the cursor.fetchmany()
         """
         ids = ()
         idString = ""
-        for row in rows:
-            ids = ids + (str(row['record_id']),)
-        idString = ', '.join(ids)
+        for row in self.rows:
+            record_id = row[0]
+            ids = ids + (record_id,)
+        idString = ("?, " * self.arraySize)[:-2]
         sqlCommand = "UPDATE derived_images \
                       SET status='L' \
                       WHERE record_id IN ({0})".format(idString)
-        self.cursor.execute(sqlCommand)
+        self.cursor.execute(sqlCommand, ids)
         self.connection.commit()
 
     def lockAndReadRecords(self):
-        """ Find a given number of records with status == 'U', set the status to 'L', and return the records in a dictionary-like object
+        """ Find a given number of records with status == 'U', set the status to 'L',
+            and return the records in a dictionary-like object
         """
         self.openDatabase()
         try:
-            rows = self.getBatch()
-            self.lockBatch(rows)
+            self.getBatch()
+            self.lockBatch()
         finally:
             self.closeDatabase()
-        return rows
+        return self.rows
 
-    def writeAndUnlockRecord(self, columns, values):
-        """ Open the database, insert the evaluation values into the image_reviews table, and update the status == 'R' for the record_id
+    def writeAndUnlockRecord(self, values):
+        """ Open the database, insert the evaluation values into the image_reviews
+            table, and update the status == 'R' for the record_id
             Arguments:
-            - `columns`: a tuple of columns from the image_reviews table, minus 'reviewer_id'
             - `values`: a tuple of the corresponding values for the columns tuple
         """
+        self.getReviewerID()
+        self.writeReview(values)
+        self.unlockRecord(values[0])
+
+    def writeReview(self, values):
+        """ Write the review values to the postgres database
+
+        Arguments:
+        - `values`:
+        """
         self.openDatabase()
-        columnString = ', '.join(('reviewer_id',) + columns)
-        valueString = ', '.join((str(self.reviewer_id[0]),) + values)
-        # for value in values:
-        #     valueString = valueString + ('?',)
-        # valuesString = ', '.join(valueString)
-        sqlCommand = "INSERT INTO image_reviews ({0}) VALUES ({1})".format(columnString, valueString)
-        print sqlCommand
         try:
-            self.cursor.execute(sqlCommand)
-            self.cursor.execute("UPDATE derived_images \
-                                 SET status='R' \
-                                 WHERE record_id=? AND status='L'", (values[1],))
+            valueString = ("?, " * (len(values) + 1))[:-2]
+            sqlCommand = "INSERT INTO image_reviews \
+                            ('record_id', 't2_average', 't1_average', \
+                            'labels_tissue', 'caudate_left', 'caudate_right', \
+                            'accumben_left', 'accumben_right', 'putamen_left', \
+                            'putamen_right', 'globus_left', 'globus_right', \
+                            'thalamus_left', 'thalamus_right', 'hippocampus_left', \
+                            'hippocampus_right', 'notes', 'reviewer_id'\
+                            ) VALUES (%s)" % valueString
+            self.cursor.execute(sqlCommand, values)
             self.connection.commit()
+        finally:
+            self.closeDatabase()
+
+    def unlockRecord(self, pKey=None):
+        """ Unlock the record in derived_images by setting the status, dependent of the index value
+
+        Arguments:
+        - `pKey`: The value for the record_id column in the self.rows variable.
+                  If pKey > -1, set that record's flag to 'R'.
+                  If pKey is None, then set the remaining, unreviewed rows to 'U'
+        """
+        self.openDatabase()
+        try:
+            if not pKey is None:
+                self.cursor.execute("UPDATE derived_images SET status='R' \
+                                     WHERE record_id=? AND status='L'", (pKey,))
+                self.connection.commit()
+            else:
+                for row in self.rows:
+                    self.cursor.select("SELECT status FROM derived_images WHERE record_id=?", (row[0],))
+                    status = self.cursor.fetchone()
+                    if status[0] == 'L':
+                        self.cursor.execute("UPDATE derived_images SET status='U' \
+                                             WHERE record_id=? AND status='L'", (row[0],))
+                        self.connection.commit()
         finally:
             self.closeDatabase()

@@ -3,8 +3,6 @@ import os
 
 from __main__ import ctk
 from __main__ import qt
-#import SimpleITK as sitk
-#import sitkUtils
 from __main__ import slicer
 from __main__ import vtk
 
@@ -25,8 +23,8 @@ class SlicerDerivedImageEval:
 
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
-        # Register the regions and QA values
-        self.images = ('t2_average', 't1_average') #T1 is second so that reviewers see it as background for regions
+        self.images = ('t2_average', 't1_average')
+        # T1 is second so that reviewers see it as background for regions
         self.regions = ('labels_tissue',
                         'caudate_left', 'caudate_right',
                         'accumben_left', 'accumben_right',
@@ -35,7 +33,6 @@ class SlicerDerivedImageEvalWidget:
                         'thalamus_left', 'thalamus_right',
                         'hippocampus_left', 'hippocampus_right')
         self.currentSession = None
-        ###        self.sessionQLabel = None
         self.imageQAWidget = None
         self.navigationWidget = None
         self.followUpDialog = None
@@ -59,10 +56,8 @@ class SlicerDerivedImageEvalWidget:
         self.clipboard = qt.QApplication.clipboard()
         self.textEditor = self.followUpDialog.findChild("QTextEdit", "textEditor")
         buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
-        # TODO
         buttonBox.connect("accepted()", self.grabNotes)
         buttonBox.connect("rejected()", self.cancelNotes)
-        #
         # Batch navigation
         self.navigationWidget = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
         nLayout = qt.QVBoxLayout(self.navigationWidget)
@@ -206,7 +201,6 @@ class SlicerDerivedImageEvalWidget:
         return values
 
     def resetWidget(self):
-        # self.getRadioValues()
         self.resetRadioWidgets()
 
     def grabNotes(self):
@@ -221,16 +215,18 @@ class SlicerDerivedImageEvalWidget:
         # TODO:
         pass
 
-    def onGetBatchFilesClicked(self):
-        values = self.getRadioValues()
-        if len(values) >= len(self.images + self.regions):
-            self.logic.writeToDatabase(values)
+    def onGetBatchFilesClicked(self, isClicked):
+        if isClicked:
+            values = self.getRadioValues()
+            if len(values) >= len(self.images + self.regions):
+                self.logic.writeToDatabase(values)
+                self.resetWidget()
+                self.logic.onGetBatchFilesClicked()
+            else:
+                # TODO: Handle this case intelligently
+                print "Not enough values for the required columns!"
         else:
-            # TODO: Handle this case intelligently
-            print "Not enough values for the required columns!"
-            raise Exception
-        self.resetWidget()
-        self.logic.onGetBatchFilesClicked()
+            self.logic.onGetBatchFilesClicked()
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
@@ -238,10 +234,8 @@ class SlicerDerivedImageEvalWidget:
         if len(values) >= len(self.images + self.regions):
             self.logic.writeToDatabase(values)
         else:
-            # TODO: Handle this case intelligently
+            self.logic.exit()
             print "Not enough values for the required columns!"
-            raise Exception
-        self.logic.exit()
 
 class SlicerDerivedImageEvalLogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
@@ -262,12 +256,11 @@ class SlicerDerivedImageEvalLogic(object):
         self.currentSession = None
         self.currentValues = (None,)*len(self.images + self.regions)
         self.sessionFiles = {}
-        self.testing = True
+        self.testing = False
         self.setup()
 
     def setup(self):
         self.createColorTable()
-        # self.createColorRegionMap()
         if self.testing:
             from database_helper import sqliteDatabase
             self.user_id = 'ttest'
@@ -275,7 +268,7 @@ class SlicerDerivedImageEvalLogic(object):
         else:
             from database_helper import postgresDatabase
             self.user_id = os.environ['USER']
-            self.database = postgresDatabase('opteron.pyschiatry.uiowa.edu', '5432', 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
+            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
             # TODO: Handle password
 
     def createColorTable(self):
@@ -306,12 +299,12 @@ class SlicerDerivedImageEvalLogic(object):
                         self.colorMap[region] = colorName
                         break
                     else:
-                        self.colorMap[region] = colorName ### BUG: brain mask colors WILL NOT match up with regions
+                        self.colorMap[region] = colorName
         print self.colorMap
 
     def addEntryToColorTable(self, buttonName):
         lTable = self.colorTableNode.GetLookupTable()
-        colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)#self.colorMap[buttonName])
+        colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)
         color = lTable.GetTableValue(colorIndex)
         self.colorTableNode.AddColor(buttonName, *color)
 
@@ -320,21 +313,7 @@ class SlicerDerivedImageEvalLogic(object):
         nodeName = self.constructLabelNodeName(buttonName)
         labelNode = slicer.util.getNode(nodeName)
         if labelNode.GetLabelMap():
-            # if buttonName != "labels_tissue":
-            #     print buttonName
-            #     self.addEntryToColorTable(buttonName)
-            # else:
-            #     print "Mask found! %s" % buttonName
-            #     for region in self.regions[1:]:
-            #         self.selectRegion(region)
-            ########################################
-            #     lTable = self.colorTableNode.GetLookupTable()
-            #     colorIndex = self.colorTableNode.GetColorIndexByName(self.colorMap[buttonName])
-            #     color = lTable.GetTableValue(colorIndex)
-            #     labelNode.GetDisplayNode().SetColor(color[0:3])
-            # else:
             labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
-            #
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
@@ -357,7 +336,10 @@ class SlicerDerivedImageEvalLogic(object):
         print "Cancelled!"
 
     def writeToDatabase(self, evaluations):
-        recordID = str(self.batchRows[self.count]['record_id'])
+        if self.testing:
+            recordID = str(self.batchRows[self.count]['record_id'])
+        else:
+            recordID = self.batchRows[self.count][0]
         values = (recordID,) + evaluations
         try:
             self.database.writeAndUnlockRecord(values)
@@ -393,22 +375,32 @@ class SlicerDerivedImageEvalLogic(object):
     def constructFilePaths(self):
         row = self.batchRows[self.count]
         sessionFiles = {}
-        baseDirectory = os.path.join(str(row['location']),
-                                     str(row['_analysis']),
-                                     str(row['_project']),
-                                     str(row['_subject']),
-                                     str(row['_session']))
-        sessionFiles['T1'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
-        sessionFiles['T2'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+        if self.testing:
+            baseDirectory = os.path.join(str(row['location']),
+                                         str(row['_analysis']),
+                                         str(row['_project']),
+                                         str(row['_subject']),
+                                         str(row['_session']))
+            sessionFiles['session'] = str(row['_session'])
+            sessionFiles['record_id'] = str(row['record_id'])
+        else:
+            # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
+            baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
+            sessionFiles['session'] = row[4]
+            sessionFiles['record_id'] = row[0]
+        sessionFiles['t1_average'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
+        sessionFiles['t2_average'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
             if regionName == 'labels_tissue':
                 sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
             else:
                 fileName = self._getLabelFileNameFromRegion(regionName)
                 sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
-        sessionFiles['session'] = str(row['_session'])
-        sessionFiles['record_id'] = str(row['record_id'])
         self.sessionFiles = sessionFiles
+        # Verify that the files exist
+        for key in self.images + self.regions:
+            if not os.path.exists(self.sessionFiles[key]):
+                raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
 
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
@@ -522,4 +514,4 @@ class SlicerDerivedImageEvalLogic(object):
         # Print list in dialog
         # dialog = self.widget.followUpDialog
         # dialog.
-        pass
+        self.database.unlockRecord()
