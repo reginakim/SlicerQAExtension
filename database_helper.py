@@ -147,7 +147,6 @@ class postgresDatabase(object):
         self.arraySize = arraySize
         self.connection = None
         self.cursor = None
-        # self.getReviewerID()
         # self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     def openDatabase(self):
@@ -215,35 +214,28 @@ class postgresDatabase(object):
             self.closeDatabase()
         return self.rows
 
-    def writeAndUnlockRecord(self, values):
-        """ Open the database, insert the evaluation values into the image_reviews
-            table, and update the status == 'R' for the record_id
-            Arguments:
-            - `values`: a tuple of the corresponding values for the columns tuple
-        """
-        self.getReviewerID()
-        self.writeReview(values)
-        self.unlockRecord(values[0])
-
     def writeReview(self, values):
         """ Write the review values to the postgres database
 
         Arguments:
         - `values`:
         """
+        self.getReviewerID()
         self.openDatabase()
         try:
             valueString = ("?, " * (len(values) + 1))[:-2]
             sqlCommand = "INSERT INTO image_reviews \
-                            ('record_id', 't2_average', 't1_average', \
-                            'labels_tissue', 'caudate_left', 'caudate_right', \
-                            'accumben_left', 'accumben_right', 'putamen_left', \
-                            'putamen_right', 'globus_left', 'globus_right', \
-                            'thalamus_left', 'thalamus_right', 'hippocampus_left', \
-                            'hippocampus_right', 'notes', 'reviewer_id'\
+                            (record_id, t2_average, t1_average, \
+                            labels_tissue, caudate_left, caudate_right, \
+                            accumben_left, accumben_right, putamen_left, \
+                            putamen_right, globus_left, globus_right, \
+                            thalamus_left, thalamus_right, hippocampus_left, \
+                            hippocampus_right, notes, reviewer_id\
                             ) VALUES (%s)" % valueString
-            self.cursor.execute(sqlCommand, values)
+            self.cursor.execute(sqlCommand, values + (self.reviewer_id,))
             self.connection.commit()
+        except:
+            raise
         finally:
             self.closeDatabase()
 
@@ -263,11 +255,13 @@ class postgresDatabase(object):
                 self.connection.commit()
             else:
                 for row in self.rows:
-                    self.cursor.select("SELECT status FROM derived_images WHERE record_id=?", (row[0],))
+                    self.cursor.execute("SELECT status FROM derived_images WHERE record_id=?", (row[0],))
                     status = self.cursor.fetchone()
                     if status[0] == 'L':
                         self.cursor.execute("UPDATE derived_images SET status='U' \
                                              WHERE record_id=? AND status='L'", (row[0],))
                         self.connection.commit()
+        except:
+            raise
         finally:
             self.closeDatabase()

@@ -24,6 +24,7 @@ endif()
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   SlicerDerivedImageEval.py
+  logic.py
   database_helper.py
   module_locator.py
   )

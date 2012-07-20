@@ -1,7 +1,7 @@
 
 #-----------------------------------------------------------------------------
 set(KIT_UNITTEST_SCRIPTS
-  databaseTest
+  databaseTest.py
   )
 
 SlicerMacroConfigureGenericPythonModuleTests("${EXTENSION_NAME}" KIT_UNITTEST_SCRIPTS)
