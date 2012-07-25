@@ -147,6 +147,7 @@ class postgresDatabase(object):
         self.arraySize = arraySize
         self.connection = None
         self.cursor = None
+        self.reviewer_id = None
         # self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     def openDatabase(self):
