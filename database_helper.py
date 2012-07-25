@@ -174,8 +174,13 @@ class postgresDatabase(object):
         self.openDatabase()
         self.cursor.execute("SELECT reviewer_id FROM reviewers \
                              WHERE login=?", (self.reviewer_login,))
-        self.reviewer_id = self.cursor.fetchone()[0]
-        self.closeDatabase()
+        try:
+            self.reviewer_id = self.cursor.fetchone()[0]
+        except TypeError:
+            raise pg8000.errors.DataError("The reviewer is not found in the database!  Contact the developers for assistance.")
+        finally:
+            print "The reviewer is: %s" % self.reviewer_login
+            self.closeDatabase()
 
     def getBatch(self):
         """ Return a dictionary of rows where the number of rows == self.arraySize and status == 'U'
