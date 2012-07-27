@@ -245,28 +245,27 @@ class postgresDatabase(object):
         finally:
             self.closeDatabase()
 
-    def unlockRecord(self, status, pKey=None):
+    def unlockRecord(self, pKey=None):
         """ Unlock the record in derived_images by setting the status, dependent of the index value
 
         Arguments:
-        -`status`: Enumeration of ['U', 'M', 'R']
         - `pKey`: The value for the record_id column in the self.rows variable.
-                  If pKey, set that record's flag to `status`.
+                  If pKey > -1, set that record's flag to 'R'.
                   If pKey is None, then set the remaining, unreviewed rows to 'U'
         """
         self.openDatabase()
         try:
             if not pKey is None:
                 self.cursor.execute("UPDATE derived_images SET status=? \
-                                     WHERE record_id=? AND status=L", (status, pKey))
+                                     WHERE record_id=? AND status='L'", (status, pKey))
                 self.connection.commit()
             else:
                 for row in self.rows:
-                    self.cursor.execute("SELECT status FROM derived_images WHERE record_id=?", (row[0],))
+                    self.cursor.execute("SELECT status FROM derived_images WHERE record_id=?", (int(row[0]),))
                     currentStatus = self.cursor.fetchone()
                     if currentStatus[0] == 'L':
-                        self.cursor.execute("UPDATE derived_images SET status='?' \
-                                             WHERE record_id=? AND status='L'", (status, row[0]))
+                        self.cursor.execute("UPDATE derived_images SET status='U' \
+                                             WHERE record_id=? AND status='L'", (int(row[0]),))
                         self.connection.commit()
         except:
             raise
