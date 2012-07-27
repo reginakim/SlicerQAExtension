@@ -104,7 +104,7 @@ class SlicerDerivedImageEvalLogic(object):
                 self.database.writeAndUnlockRecord(values)
             else:
                 self.database.writeReview(values)
-                self.database.unlockRecord(recordID)
+                self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
             print "Error writing to database!"
@@ -162,7 +162,7 @@ class SlicerDerivedImageEvalLogic(object):
             if not os.path.exists(self.sessionFiles[key]):
                 print "File not found: %s\nSkipping session..." % self.sessionFiles[key]
                 # raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
-                self.database.unlockRecord()
+                self.database.unlockRecord('M', self.sessionFiles['record_id'])
                 self.onGetBatchFilesClicked()
                 # TODO: Generalize for a batch size > 1
                 # for count in range(self.maxCount - self.count):
@@ -272,4 +272,4 @@ class SlicerDerivedImageEvalLogic(object):
         self.loadData()
 
     def exit(self):
-        self.database.unlockRecord(None)
+        self.database.unlockRecord('U')
