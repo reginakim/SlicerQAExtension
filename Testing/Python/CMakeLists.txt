@@ -12,6 +12,7 @@ foreach(script_name ${KIT_UNITTEST_SCRIPTS})
     SCRIPT ${script_name}
     SLICER_ARGS --no-main-window ${CMAKE_BINARY_DIR}/${Slicer_QTSCRIPTEDMODULES_LIB_DIR}
     TESTNAME_PREFIX nomainwindow_
+    --additional-module-paths ${CMAKE_BINARY_DIR}/
     )
 endforeach()
 

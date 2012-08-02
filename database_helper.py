@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import warnings
 
 import module_locator
@@ -121,9 +122,46 @@ class sqliteDatabase(object):
 class postgresDatabase(object):
     """ Connect to the Postgres database and prevent multiple user collisions
         during simultaneous evaluations
-
     """
-    def __init__(self, host, port, database, user, password=None, login=None, arraySize=1):
+
+    def __init__(self, *args, **kwds):
+        """ Set the class attributes needed for connecting to the database and interacting with it
+        ------------------------
+        Arguments:
+        - `host`: The name of the host machine (default = 'localhost')
+        - `port`: The port number (default = 5432)
+        - `pguser`: The username to connect to the Postgres server with, default is 'postgres'
+        - `database`: The name of the database to connect to.  If omitted, it is the same as the `user`
+        - `password`: The password associated with the `user` on the Postgres server, default is 'postgres'
+        - `login`: The reviewer login ID, normally $USER
+        - `arraySize`: The number of rows to return
+        ------------------------
+        >>> import os
+        >>> db = postgresDatabase()
+        >>> db != None
+        True
+        >>> db.host == 'localhost' and db.port == 5432 and db.pguser == 'postgres' and db.pguser == db.database and db.pguser == db.password and db.login == os.environ['USER'] and db.arraySize == 1
+        True
+        >>> # Test positional args
+        >>> db = postgresDatabase('my.test.host', 0, 'myuser', None, 'pass', 'login', 15)
+        >>> db != None
+        True
+        >>> db.host == 'my.test.host' and db.port == 0 and db.pguser == 'myuser' and db.pguser == db.database and db.password == 'pass' and db.login == 'login' and db.arraySize == 15
+        True
+        >>> # Test a mix
+        >>> db = postgresDatabase('my.test.host', 'myuser', port=15, database='postgres', arraySize=15, password='pass', pguser='login')
+        >>> db != None
+        True
+        >>> db.host == 'my.test.host' and db.port == 15 and db.pguser == 'login' and db.database == 'postgres' and db.password == 'pass' and db.login == 'myuser' and db.arraySize == 15
+        True
+        >>> # Test keyword args
+        >>> db = postgresDatabase(host='my.test.host', arraySize=15, login='myuser', password='pass', database=None, pguser='login', port=15)
+        >>> db != None
+        True
+        >>> db.host == 'my.test.host' and db.port == 15 and db.pguser == 'login' and db.pguser == db.database and db.password == 'pass' and db.login == 'myuser' and db.arraySize == 15
+        True
+        """
+        import os
         try:
             import pg8000
         except ImportError:
@@ -137,25 +175,45 @@ class postgresDatabase(object):
         globals()['sql'] = pg8000.DBAPI
         sql.paramstyle = "qmark"
         self.rows = None
-        self.host = host
-        self.port = port
-        self.database = database
-        self.user = user
-        self.password = password
-        self.reviewer_login = login
-        self.arraySize = arraySize
         self.connection = None
         self.cursor = None
-        self.reviewer_id = None
         # self.isolationLevel = sql.extensions.ISOLATION_LEVEL_SERIALIZABLE
+        # Set defaults
+        self.host = 'localhost'
+        self.port = 5432
+        self.pguser = 'postgres'
+        self.database = None
+        self.password = 'postgres'
+        self.login = os.environ['USER']
+        self.arraySize = 1
+        # Set keyword inputs
+        if not kwds is None:
+            argkeys = ['host', 'port', 'pguser', 'database', 'password', 'login', 'arraySize']
+            keys = sorted(kwds.keys())
+            for key in keys:
+                argkeys.remove(key)
+                value = kwds[key]
+                setattr(self, key, value)
+        if len(argkeys) == len(args) and len(args) > 0:
+                for key, arg in zip(argkeys, args):
+                    setattr(self, key, arg)
+        # Set the database default
+        if self.database is None: self.database = self.pguser
 
     def openDatabase(self):
         """ Open the database and create cursor and connection
+        >>> db = postgresDatabase()
+        >>> db.openDatabase()
+        >>> import pg8000 as sql
+        >>> isinstance(db.connection, sql.DBAPI.ConnectionWrapper)
+        True
+        >>> isinstance(db.cursor, sql.DBAPI.CursorWrapper)
+        True
         """
         self.connection = sql.connect(host=self.host,
                                       port=self.port,
                                       database=self.database,
-                                      user=self.user,
+                                      user=self.pguser,
                                       password=self.password)
         self.cursor = self.connection.cursor()
         self.cursor.arraysize = self.arraySize
@@ -170,27 +228,44 @@ class postgresDatabase(object):
 
     def getReviewerID(self):
         """ Using the database login name, get the reviewer_id key from the reviewers table
+        ------------------------
+        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+        >>> db.getReviewerID(); db.reviewer_id == 1;
+        True
+        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user0')
+        >>> db.getReviewerID();
+        Traceback (most recent call last):
+            ...
+        DataError: Reviewer user0 is not registered in the database test!
         """
         self.openDatabase()
         self.cursor.execute("SELECT reviewer_id FROM reviewers \
-                             WHERE login=?", (self.reviewer_login,))
+                             WHERE login=?", (self.login,))
         try:
             self.reviewer_id = self.cursor.fetchone()[0]
         except TypeError:
-            raise pg8000.errors.DataError("The reviewer is not found in the database!  Contact the developers for assistance.")
+            raise pg8000.errors.DataError("Reviewer %s is not registered in the database %s!" % (self.login, self.database))
         finally:
-            print "The reviewer is: %s" % self.reviewer_login
             self.closeDatabase()
 
     def getBatch(self):
         """ Return a dictionary of rows where the number of rows == self.arraySize and status == 'U'
+        ----------------------
+        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+        >>> db.getBatch()
+        Traceback (most recent call last):
+            ...
+        AttributeError: 'NoneType' object has no attribute 'execute'
+        >>> db.openDatabase(); db.getBatch(); db.closeDatabase()
+        >>> self.rows is None
+        True
         """
         self.cursor.execute("SELECT * \
                             FROM derived_images \
                             WHERE status = 'U'")
         self.rows = self.cursor.fetchmany()
         if not self.rows:
-            raise warnings.warn("No rows were status == 'U' were found!")
+            raise pg8000.errors.DataError("No rows were status == 'U' were found!")
 
     def lockBatch(self):
         """ Set the status of all batch members to 'L'
@@ -270,3 +345,8 @@ class postgresDatabase(object):
             raise
         finally:
             self.closeDatabase()
+
+if __name__ == "__main__":
+    import doctest
+    import pg8000
+    doctest.testmod()
