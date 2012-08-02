@@ -22,7 +22,6 @@ class SlicerDerivedImageEvalLogic(object):
         self.colorTableNode = None
         self.user_id = None
         self.database = None
-        self.batchList = None
         self.batchSize = 1
         self.batchRows = None
         self.count = 0 # Starting value
@@ -36,13 +35,19 @@ class SlicerDerivedImageEvalLogic(object):
     def setup(self):
         self.createColorTable()
         if self.testing:
-            from database_helper import sqliteDatabase
-            self.user_id = 'ttest'
-            self.database = sqliteDatabase(self.user_id, self.batchSize)
+            # from database_helper import sqliteDatabase
+            from database_helper import postgresDatabase
+            # self.user_id = 'ttest'
+            self.user_id = 'user1'
+            # self.database = sqliteDatabase(self.user_id, self.batchSize)
+            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'tester', 'test',
+                                             'test1', self.user_id, self.batchSize)
+            # TODO: This currently gives an md5 password error on my machine
         else:
             from database_helper import postgresDatabase
             self.user_id = os.environ['USER']
-            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'AutoWorkUp', 'autoworkup', 'AW_Up-2012', self.user_id, self.batchSize)
+            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'AutoWorkUp', 'autoworkup',
+                                             'AW_Up-2012', self.user_id, self.batchSize)
             # TODO: Handle password
 
     def createColorTable(self):

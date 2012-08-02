@@ -132,7 +132,6 @@ class postgresDatabase(object):
             import sys
             pg8kDir = [os.path.join(__file__, 'Resources', 'Python', 'pg8000-1.08')]
             newSysPath = pg8kDir + sys.path
-            print "+++++++++++++++++++++"
             sys.path = newSysPath
             import pg8000
         globals()['sql'] = pg8000.DBAPI
@@ -245,7 +244,7 @@ class postgresDatabase(object):
         finally:
             self.closeDatabase()
 
-    def unlockRecord(self, pKey=None):
+    def unlockRecord(self, status='U', pKey=None):
         """ Unlock the record in derived_images by setting the status, dependent of the index value
 
         Arguments:
