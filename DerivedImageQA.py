@@ -105,6 +105,9 @@ class DerivedImageQAWidget:
         ### TESTING ###
         if True:
             self.logic.onGetBatchFilesClicked()
+            # Simulate user clicking the first image (initial image loading)
+            t2Button = self.layout.parentWidget().findChild("QPushButton", self.images[0])
+            t2Button.click()
         ### END ###
 
     def loadUIFile(self, fileName):
