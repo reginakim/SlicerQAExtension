@@ -57,7 +57,7 @@ class SlicerDerivedImageEvalWidget:
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=True)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')

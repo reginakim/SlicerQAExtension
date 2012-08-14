@@ -154,19 +154,10 @@ class SlicerDerivedImageEvalLogic(object):
     def constructFilePaths(self):
         row = self.batchRows[self.count]
         sessionFiles = {}
-        if self.testing:
-            baseDirectory = os.path.join(str(row['location']),
-                                         str(row['_analysis']),
-                                         str(row['_project']),
-                                         str(row['_subject']),
-                                         str(row['_session']))
-            sessionFiles['session'] = str(row['_session'])
-            sessionFiles['record_id'] = str(row['record_id'])
-        else:
-            # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
-            baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
-            sessionFiles['session'] = row[4]
-            sessionFiles['record_id'] = row[0]
+        # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
+        baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
+        sessionFiles['session'] = row[4]
+        sessionFiles['record_id'] = row[0]
         sessionFiles['t1_average'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
         sessionFiles['t2_average'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
