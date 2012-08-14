@@ -10,6 +10,14 @@ import module_locator
 
 globals()['__file__'] = module_locator.module_path()
 
+try:
+    import ConfigParser as cParser
+    # import logging
+    # import logging.handlers
+except ImportError:
+    print "External modules not found!"
+    raise ImportError
+
 
 class SlicerDerivedImageEvalLogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
@@ -34,21 +42,27 @@ class SlicerDerivedImageEvalLogic(object):
 
     def setup(self):
         self.createColorTable()
+        config = cParser.SafeConfigParser()
         if self.testing:
-            # from database_helper import sqliteDatabase
-            from database_helper import postgresDatabase
-            # self.user_id = 'ttest'
+            configFile = os.path.join(__file__, 'test.cfg')
             self.user_id = 'user1'
-            # self.database = sqliteDatabase(self.user_id, self.batchSize)
-            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'tester', 'test',
-                                             'test1', self.user_id, self.batchSize)
-            # TODO: This currently gives an md5 password error on my machine
         else:
-            from database_helper import postgresDatabase
+            configFile = os.path.join(__file__, 'database.cfg')
             self.user_id = os.environ['USER']
-            self.database = postgresDatabase('opteron.psychiatry.uiowa.edu', 5432, 'AutoWorkUp', 'autoworkup',
-                                             'AW_Up-2012', self.user_id, self.batchSize)
-            # TODO: Handle password
+        if not os.path.exists(configFile):
+            raise IOError("File {0} not found!".format(configFile))
+        config.read(configFile)
+        host = config.get('Postgres', 'Host')
+        port = config.getint('Postgres', 'Port')
+        database = config.get('Postgres', 'Database')
+        db_user = config.get('Postgres', 'User')
+        password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
+        #        import hashlib as md5
+        from database_helper import postgresDatabase
+        print host, port, database, db_user, password
+        #        md5Password = md5.new(password)
+        self.database = postgresDatabase(host, port, database, db_user, password, # md5Password.digest(),
+                                         self.user_id, self.batchSize)
 
     def createColorTable(self):
         """

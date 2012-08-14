@@ -11,6 +11,14 @@ import logic
 
 globals()['__file__'] = module_locator.module_path()
 
+### TODO: Add logging
+# try:
+#     import logging
+#     import logging.handlers
+# except ImportError:
+#     print "External modules not found!"
+#     raise ImportError
+
 class SlicerDerivedImageEval:
     def __init__(self, parent):
         parent.title = 'Image Evaluation'
@@ -49,7 +57,7 @@ class SlicerDerivedImageEvalWidget:
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=True)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
