@@ -21,7 +21,7 @@ globals()['__file__'] = module_locator.module_path()
 
 class SlicerDerivedImageEval:
     def __init__(self, parent):
-        parent.title = 'Image Evaluation'
+        parent.title = 'DWI Image Evaluation'
         parent.categories = ['Work in Progress']
         parent.dependencies = ['Volumes']
         parent.contributors = ['Dave Welch (UIowa), Hans Johnson (UIowa)']
@@ -32,14 +32,7 @@ class SlicerDerivedImageEval:
 
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
-        self.images = ('t2_average', 't1_average') # T1 is second so that reviewers see it as background for regions
-        self.regions = ('labels_tissue',
-                        'caudate_left', 'caudate_right',
-                        'accumben_left', 'accumben_right',
-                        'putamen_left', 'putamen_right',
-                        'globus_left', 'globus_right',
-                        'thalamus_left', 'thalamus_right',
-                        'hippocampus_left', 'hippocampus_right')
+        self.images = ('DWI',)
         self.currentSession = None
         self.imageQAWidget = None
         self.navigationWidget = None
@@ -51,13 +44,13 @@ class SlicerDerivedImageEvalWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self)
+            #self.logic = logic.SlicerDerivedImageEvalLogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
+            #self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
@@ -66,45 +59,43 @@ class SlicerDerivedImageEvalWidget:
         buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
         buttonBox.connect("accepted()", self.grabNotes)
         buttonBox.connect("rejected()", self.cancelNotes)
-        # Batch navigation
-        self.navigationWidget = self.loadUIFile('Resources/UI/navigationCollapsibleButton.ui')
-        nLayout = qt.QVBoxLayout(self.navigationWidget)
-        # TODO: Fix batch list sizing
-        ### nLayout.addWidget(self.navigationWidget.findChild("QLabel", "batchLabel"))
-        ### nLayout.addWidget(self.navigationWidget.findChild("QListWidget", "batchList"))
-        nLayout.addWidget(self.navigationWidget.findChild("QWidget", "buttonContainerWidget"))
-        # Find navigation buttons
-        self.previousButton = self.navigationWidget.findChild("QPushButton", "previousButton")
-        self.quitButton = self.navigationWidget.findChild("QPushButton", "quitButton")
-        self.nextButton = self.navigationWidget.findChild("QPushButton", "nextButton")
-        self.connectSessionButtons()
+        self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
+        ### HACK
+        vLogic = slicer.modules.volumes.logic()
+        dwiNodeName = "test_dwi"
+        dwiVolumeNode = slicer.util.getNode(dwiNodeName)
+        if dwiVolumeNode is None:
+            vLogic.AddArchetypeVolume('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr',
+                                      dwiNodeName, 0)
+            dwiVolumeNode = slicer.util.getNode(dwiNodeName)
+            dwiVolumeNode.CreateDefaultDisplayNodes()
+            dwiVolumeNode.GetDisplayNode().AutoWindowLevelOn()
+        self.dwiWidget.setMRMLVolumeNode(dwiVolumeNode)
+        ### END HACK
         # Evaluation subsection
         self.imageQAWidget = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
         qaLayout = qt.QVBoxLayout(self.imageQAWidget)
         qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "titleFrame"))
         qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "tableVLine"))
         # Create review buttons on the fly
-        for image in self.images + self.regions:
+        for image in self.images:
             reviewButton = self.reviewButtonFactory(image)
             qaLayout.addWidget(reviewButton)
-        self.connectReviewButtons()
-        # resetButton
-        self.resetButton = qt.QPushButton()
-        self.resetButton.setText('Reset evaluation')
-        self.resetButton.connect('clicked(bool)', self.resetWidget)
+#        self.connectReviewButtons()
         # batch button
-        self.batchButton = qt.QPushButton()
-        self.batchButton.setText('Get evaluation batch')
-        self.batchButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
+        self.nextButton = qt.QPushButton()
+        self.nextButton.setText('Get next DWI')
+#        self.nextButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
+        self.dwiArtifactWidget = self.loadUIFile('Resources/UI/dwiArtifactWidget.ui')
+        qaLayout.addWidget(self.dwiArtifactWidget)
+        qaLayout.addWidget(self.nextButton)
         # Add all to layout
-        self.layout.addWidget(self.navigationWidget)
-        nLayout.addWidget(self.resetButton)
-        nLayout.addWidget(self.batchButton)
+        self.layout.addWidget(self.dwiWidget)
         self.layout.addWidget(self.imageQAWidget)
         self.layout.addStretch(1)
         ### TESTING ###
-        if True:
-            self.logic.onGetBatchFilesClicked()
+#        if True:
+#            self.logic.onGetBatchFilesClicked()
         ### END ###
 
     def loadUIFile(self, fileName):
@@ -137,9 +128,9 @@ class SlicerDerivedImageEvalWidget:
     def _formatText(self, text):
         parsed = text.split("_")
         if len(parsed) > 1:
-            text = " ".join([parsed[1].capitalize(), parsed[0]])
+            text = " ".join([parsed[1], parsed[0]])
         else:
-            text = parsed[0].capitalize()
+            text = parsed[0]
         return text
 
     def connectSessionButtons(self):
@@ -154,7 +145,7 @@ class SlicerDerivedImageEvalWidget:
         self.buttonMapper = qt.QSignalMapper()
         self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
         self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
-        for image in self.images + self.regions:
+        for image in self.images:
             pushButton = self.imageQAWidget.findChild('QPushButton', image)
             self.buttonMapper.setMapping(pushButton, image)
             pushButton.connect('clicked()', self.buttonMapper, 'map()')
@@ -187,7 +178,7 @@ class SlicerDerivedImageEvalWidget:
         values = ()
         needsFollowUp = False
         radios = self.imageQAWidget.findChildren("QRadioButton")
-        for image in self.images + self.regions:
+        for image in self.images:
             for radio in radios:
                 if radio.objectName.find(image) > -1 and radio.checked:
                     if radio.objectName.find("_good") > -1:
@@ -228,7 +219,7 @@ class SlicerDerivedImageEvalWidget:
 
     def onGetBatchFilesClicked(self):
         values = self.getRadioValues()
-        if len(values) >= len(self.images + self.regions):
+        if len(values) >= len(self.images):
             self.logic.writeToDatabase(values)
             self.resetWidget()
             self.logic.onGetBatchFilesClicked()
@@ -240,13 +231,15 @@ class SlicerDerivedImageEvalWidget:
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
         values = self.getRadioValues()
-        if len(values) >= len(self.images + self.regions):
+        if len(values) >= len(self.images):
             # TODO: Write a confirmation dialog popup
-            self.logic.writeToDatabase(values)
+            pass ### HACK ###
+#            self.logic.writeToDatabase(values)
         elif len(values) == 0:
-            self.logic.exit()
+            pass ### HACK ###
+#            self.logic.exit()
         else:
             # TODO: write a prompt window
             print "Not enough values for the required columns!"
-            self.logic.exit()
+#            self.logic.exit()
             # TODO: clear scene
