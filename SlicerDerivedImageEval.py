@@ -44,13 +44,13 @@ class SlicerDerivedImageEvalWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            #self.logic = logic.SlicerDerivedImageEvalLogic(self)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            #self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
@@ -60,18 +60,6 @@ class SlicerDerivedImageEvalWidget:
         buttonBox.connect("accepted()", self.grabNotes)
         buttonBox.connect("rejected()", self.cancelNotes)
         self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
-        ### HACK
-        vLogic = slicer.modules.volumes.logic()
-        dwiNodeName = "test_dwi"
-        dwiVolumeNode = slicer.util.getNode(dwiNodeName)
-        if dwiVolumeNode is None:
-            vLogic.AddArchetypeVolume('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr',
-                                      dwiNodeName, 0)
-            dwiVolumeNode = slicer.util.getNode(dwiNodeName)
-            dwiVolumeNode.CreateDefaultDisplayNodes()
-            dwiVolumeNode.GetDisplayNode().AutoWindowLevelOn()
-        self.dwiWidget.setMRMLVolumeNode(dwiVolumeNode)
-        ### END HACK
         # Evaluation subsection
         self.imageQAWidget = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
         qaLayout = qt.QVBoxLayout(self.imageQAWidget)
@@ -81,7 +69,7 @@ class SlicerDerivedImageEvalWidget:
         for image in self.images:
             reviewButton = self.reviewButtonFactory(image)
             qaLayout.addWidget(reviewButton)
-#        self.connectReviewButtons()
+        self.connectReviewButtons()
         # batch button
         self.nextButton = qt.QPushButton()
         self.nextButton.setText('Get next DWI')
@@ -93,10 +81,7 @@ class SlicerDerivedImageEvalWidget:
         self.layout.addWidget(self.dwiWidget)
         self.layout.addWidget(self.imageQAWidget)
         self.layout.addStretch(1)
-        ### TESTING ###
-#        if True:
-#            self.logic.onGetBatchFilesClicked()
-        ### END ###
+        self.logic.onGetBatchFilesClicked()
 
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
@@ -114,6 +99,7 @@ class SlicerDerivedImageEvalWidget:
         pushButton = widget.findChild("QPushButton", "imageButton")
         pushButton.objectName = image
         pushButton.setText(self._formatText(image))
+        # TODO: Convert push button to label
         radioContainer = widget.findChild("QWidget", "radioWidget")
         radioContainer.objectName = image + "_radioWidget"
         # Set radio buttons
@@ -143,7 +129,7 @@ class SlicerDerivedImageEvalWidget:
     def connectReviewButtons(self):
         """ Map the region buttons clicked() signals to the function """
         self.buttonMapper = qt.QSignalMapper()
-        self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
+        #self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
         self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
         for image in self.images:
             pushButton = self.imageQAWidget.findChild('QPushButton', image)
