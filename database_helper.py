@@ -30,9 +30,12 @@ class postgresDatabase(object):
         True
         >>> # Test positional args
         >>> db = postgresDatabase('my.test.host', 0, 'myuser', None, 'pass', 'login', 15)
-        >>> db != None
+        >>> db1 = postgresDatabase('my.test.host', 0, 'myuser', 'MyDB', 'pass', 'login', 15)
+        >>> db != None and db1 != None
         True
-        >>> db.host == 'my.test.host' and db.port == 0 and db.pguser == 'myuser' and db.pguser == db.database and db.password == 'pass' and db.login == 'login' and db.arraySize == 15
+        >>> db.host == 'my.test.host' and db.port == 0 and db.pguser == 'myuser' and db.database == 'myuser' and db.pguser == db.database and db.password == 'pass' and db.login == 'login' and db.arraySize == 15
+        True
+        >>> db1.database == 'MyDB'
         True
         >>> # Test a mix
         >>> db = postgresDatabase('my.test.host', 'myuser', port=15, database='postgres', arraySize=15, password='pass', pguser='login')
@@ -59,6 +62,7 @@ class postgresDatabase(object):
             sys.path = newSysPath
             import pg8000
         globals()['sql'] = pg8000.DBAPI
+        globals()['pg8000'] = pg8000
         sql.paramstyle = "qmark"
         self.rows = None
         self.connection = None
@@ -90,10 +94,10 @@ class postgresDatabase(object):
         """ Open the database and create cursor and connection
         >>> db = postgresDatabase()
         >>> db.openDatabase()
-        >>> import pg8000 as sql
-        >>> isinstance(db.connection, sql.DBAPI.ConnectionWrapper)
+        >>> import pg8000 as pg
+        >>> isinstance(db.connection, pg.DBAPI.ConnectionWrapper)
         True
-        >>> isinstance(db.cursor, sql.DBAPI.CursorWrapper)
+        >>> isinstance(db.cursor, pg.DBAPI.CursorWrapper)
         True
         """
         self.connection = sql.connect(host=self.host,
@@ -115,11 +119,11 @@ class postgresDatabase(object):
     def getReviewerID(self):
         """ Using the database login name, get the reviewer_id key from the reviewers table
         ------------------------
-        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+        >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='test', database='test', password='test', login='user1')
         >>> db.getReviewerID(); db.reviewer_id == 1;
         True
-        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user0')
-        >>> db.getReviewerID();
+        >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='test', database='test', password='test', login='user0')
+        >>> db.getReviewerID()
         Traceback (most recent call last):
             ...
         DataError: Reviewer user0 is not registered in the database test!
@@ -137,7 +141,7 @@ class postgresDatabase(object):
     def getBatch(self):
         """ Return a dictionary of rows where the number of rows == self.arraySize and status == 'U'
         ----------------------
-        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+        >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='test', database='test', password='test', login='user1')
         >>> db.getBatch()
         Traceback (most recent call last):
             ...
@@ -157,10 +161,8 @@ class postgresDatabase(object):
     def lockBatch(self):
         """ Set the status of all batch members to 'L'
         ----------------------
-        >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
-        # >>> db.openDatabase(); db.getBatch(); db.lockBatch()
-        # >>> connection = pg8000...
-        >>> print "This testing is not complete!"
+        >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='test', database='test', password='test', login='user1')
+        >>> print "This testing is not complete!" # >>> db.openDatabase(); db.getBatch(); db.lockBatch() # >>> connection = pg8000...
         """
         ids = ()
         idString = ""
@@ -197,12 +199,12 @@ class postgresDatabase(object):
         try:
             valueString = ("?, " * (len(values) + 1))[:-2]
             sqlCommand = "INSERT INTO dwi_reviews \
-                            (record_id, dwi_image, \
+                            (record_id, \
                              airtissue_frontal, airtissue_occipital, airtissue_parietal, airtissue_temporal, \
                              crop_frontal, crop_occipital, crop_parietal, crop_temporal, \
                              dropout_frontal, dropout_occipital, dropout_parietal, dropout_temporal, \
                              interleave_frontal, interleave_occipital, interleave_parietal, interleave_temporal, \
-                             missingData, notes, reviewer_id\
+                             missingData, dwi_image, notes, reviewer_id\
                             ) VALUES (%s)" % valueString
             self.cursor.execute(sqlCommand, values + (self.reviewer_id,))
             self.connection.commit()

@@ -1,9 +1,12 @@
 import os
 
-from __main__ import ctk
-from __main__ import qt
-from __main__ import slicer
-from __main__ import vtk
+try:
+    from __main__ import ctk
+    from __main__ import qt
+    from __main__ import slicer
+    from __main__ import vtk
+except:
+    pass
 
 import database_helper
 import module_locator
@@ -40,7 +43,19 @@ class SlicerDerivedImageEvalLogic(object):
         self.setup()
 
     def setup(self):
-        self.createColorTable()
+        """ Setup module logic
+
+        >>> class widget(object):
+        ...   def __init__(self, input):
+        ...     self.images = (input,)
+        ...
+
+        >>> widget = widget('DWI')
+        >>> logic = SlicerDerivedImageEvalLogic(widget, True)
+        >>> logic.database.database == 'test' and logic.database.host == 'psych-db.psychiatry.uiowa.edu' and logic.database.password == 'test' and logic.database.login == 'user1' and logic.database.pguser == 'test'
+        True
+        """
+        # self.createColorTable()
         config = cParser.SafeConfigParser()
         if self.testing:
             configFile = os.path.join(__file__, 'test.cfg')
@@ -57,7 +72,7 @@ class SlicerDerivedImageEvalLogic(object):
         db_user = config.get('Postgres', 'User')
         password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
         from database_helper import postgresDatabase
-        self.database = postgresDatabase(host, port, database, db_user, password,
+        self.database = postgresDatabase(host, port, db_user, database, password,
                                          self.user_id, self.batchSize)
 
     def createColorTable(self):
@@ -109,17 +124,11 @@ class SlicerDerivedImageEvalLogic(object):
         print "Cancelled!"
 
     def writeToDatabase(self, evaluations):
-        if self.testing:
-            recordID = str(self.batchRows[self.count]['record_id'])
-        else:
-            recordID = self.batchRows[self.count][0]
+        recordID = self.batchRows[self.count][0]
         values = (recordID,) + evaluations
         try:
-            if self.testing:
-                self.database.writeAndUnlockRecord(values)
-            else:
-                self.database.writeReview(values)
-                self.database.unlockRecord('R', recordID)
+            self.database.writeReview(values)
+            self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
             print "Error writing to database!"
@@ -138,8 +147,8 @@ class SlicerDerivedImageEvalLogic(object):
         """ """
         self.count = 0
         ### HACK
-        self.batchRows = [(0, 'src', 'Slicer-extensions', 'SlicerQAExtension', 'DWI', '/scratch/welchdm')]
-        ### self.batchRows = self.database.lockAndReadRecords()
+        ### self.batchRows = [(0, 'src', 'Slicer-extensions', 'SlicerQAExtension', 'DWI', '/scratch/welchdm')]
+        self.batchRows = self.database.lockAndReadRecords()
         ### END ###
         self.maxCount = len(self.batchRows)
         self.constructFilePaths()
@@ -158,15 +167,13 @@ class SlicerDerivedImageEvalLogic(object):
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
         ### HACK
-        outputDir = baseDirectory
         ### outputDir = os.path.join(baseDirectory, 'DTIPrepOutput')
-        ### END ###
-        outputList = os.listdir(outputDir)
-        for item in outputList:
-            if item.rfind('_QCed.nrrd') >= 0:
-                sessionFiles['DWI'] = os.path.join(outputDir, item)
-                break
-        ### HACK
+        ### outputList = os.listdir(outputDir)
+        ### for item in outputList:
+        ###     if item.rfind('_QCed.nrrd') >= 0:
+        ###         sessionFiles['DWI'] = os.path.join(outputDir, item)
+        ###         break
+        outputDir = baseDirectory
         sessionFiles['DWI'] = os.path.join(outputDir, 'dwi.nhdr')
         ### END ###
         if not 'DWI' in sessionFiles.keys():
@@ -190,12 +197,13 @@ class SlicerDerivedImageEvalLogic(object):
         dataDialog.setText('Loading file for session %s...' % self.currentSession);
         dataDialog.show()
         volumeLogic = slicer.modules.volumes.logic()
-        ### HACK
         dwiNodeName = '%s_dwi' % self.currentSession
         dwiVolumeNode = slicer.util.getNode(dwiNodeName)
         if dwiVolumeNode is None:
+            ### HACK
             volumeLogic.AddArchetypeVolume(self.sessionFiles['DWI'], dwiNodeName, 0)
             # ('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr', dwiNodeName, 0)
+            ### END ###
             if slicer.util.getNode(dwiNodeName) is None:
                 raise IOError("Could not load session file for DWI! File: %s" % self.sessionFiles['DWI'])
             dwiVolumeNode = slicer.util.getNode(dwiNodeName)
@@ -277,4 +285,8 @@ class SlicerDerivedImageEvalLogic(object):
         self.loadData()
 
     def exit(self):
-        pass ### HACK ### self.database.unlockRecord('U')
+        self.database.unlockRecord('U')
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)

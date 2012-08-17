@@ -46,13 +46,13 @@ class SlicerDerivedImageEvalWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=True)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=False)
+            self.logic = logic.SlicerDerivedImageEvalLogic(self, test=True)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
@@ -73,7 +73,7 @@ class SlicerDerivedImageEvalWidget:
         # batch button
         self.nextButton = qt.QPushButton()
         self.nextButton.setText('Get next DWI')
-#        self.nextButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
+        self.nextButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
         self.dwiArtifactWidget = self.loadUIFile('Resources/UI/dwiArtifactWidget.ui')
         qaLayout.addWidget(self.dwiArtifactWidget)
         qaLayout.addWidget(self.nextButton)
@@ -142,10 +142,10 @@ class SlicerDerivedImageEvalWidget:
         """ Disable and reset all radio buttons in the widget """
         radios = self.imageQAWidget.findChildren("QRadioButton")
         for radio in radios:
-            radio.setCheckable(False)
-        checkboxess = self.dwiArtifactWidget.findChildren("QCheckBox")
+            radio.setChecked(False)
+        checkboxes = self.dwiArtifactWidget.findChildren("QCheckBox")
         for checkbox in checkboxes:
-            checkbox.isChecked(False)
+            checkbox.setChecked(False)
 
     def getRadioValues(self):
         values = ()
@@ -177,19 +177,27 @@ class SlicerDerivedImageEvalWidget:
     def getCheckboxValues(self):
         values = ()
         needsFollowUp = False
-        checkboxes = self.dwiArtifactWidget.findChildren('QCheckBox')
         for artifact in self.artifacts:
+            if artifact == 'missingData':
+                objectName = 'missingLineEdit'
+                lineEdit = self.dwiArtifactWidget.findChild('QLineEdit', objectName)
+                notes = lineEdit.text
+                if notes is None:
+                    notes = 'Null'
+                values = values + (lineEdit.text,)
+                break
             for lobe in self.lobes:
-                for cBox in checkboxes:
-                    if cBox.objectName == artifact + '_' + lobe:
-                        if cBox.checked:
-                            values = values + ('t',)
-                        else:
-                            values = values + ('f',)
+                objectName = artifact + '_' + lobe
+                checkBox = self.dwiArtifactWidget.findChild('QCheckBox', objectName)
+                if checkBox.checked:
+                    values = values + (True,)
+                else:
+                    values = values + (False,)
         return values
 
     def resetWidget(self):
         self.resetRadioWidgets()
+        ### TODO: self.resetDWIwidget()
 
     def grabNotes(self):
         self.notes = None
@@ -204,29 +212,51 @@ class SlicerDerivedImageEvalWidget:
         # TODO:
         pass
 
-    def onGetBatchFilesClicked(self):
-        values = self.getCheckboxValues() + self.getRadioValues()
-        if len(values) >= len(self.images) + 4*4: ### HACK
+
+    def getValues(self):
+        radioValues = self.getRadioValues()
+        if 0 in radioValues or -1 in radioValues:
+            print 'We need DWI evaluation input!'
+        else:
+            print 'We do not need DWI review'
+        values = self.getCheckboxValues() + radioValues
+        return values
+
+    def checkValues(self):
+        values = self.getValues()
+        if len(values) >= len(self.images) + ((len(self.artifacts) - 1) * len(self.lobes)):
+            print values ### HACK
             self.logic.writeToDatabase(values)
             self.resetWidget()
-            self.logic.onGetBatchFilesClicked()
+            return (0, values)
+        elif len(values) == 0:
+            print "No values at all!"
+            return (-1, values)
         else:
             # TODO: Handle this case intelligently
             print "Not enough values for the required columns!"
+            print values
+        return (-2, values)
 
+    def onGetBatchFilesClicked(self):
+        (code, values) = self.checkValues()
+        if code == 0:
+            self.logic.writeToDatabase(values)
+            self.logic.onGetBatchFilesClicked()
+        else:
+            pass
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        values = self.getRadioValues()
-        if len(values) >= len(self.images) + 4*4: ### HACK
+        (code, values) = self.checkValues()
+        if code == 0:
             # TODO: Write a confirmation dialog popup
-            pass ### HACK ###
-#            self.logic.writeToDatabase(values)
-        elif len(values) == 0:
-            pass ### HACK ###
-#            self.logic.exit()
+            self.logic.writeToDatabase(values)
+            self.logic.exit()
+            # self.logic.onGetBatchFilesClicked()
+        elif code == -1:
+            self.logic.exit()
         else:
             # TODO: write a prompt window
-            print "Not enough values for the required columns!"
-#            self.logic.exit()
+            self.logic.exit()
             # TODO: clear scene
