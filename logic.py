@@ -191,11 +191,11 @@ class SlicerDerivedImageEvalLogic(object):
         dataDialog.show()
         volumeLogic = slicer.modules.volumes.logic()
         ### HACK
-        dwiNodeName = "test_dwi" # '%s_dwi' % self.currentSession
+        dwiNodeName = '%s_dwi' % self.currentSession
         dwiVolumeNode = slicer.util.getNode(dwiNodeName)
         if dwiVolumeNode is None:
-            volumeLogic.AddArchetypeVolume('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr',
-                                           dwiNodeName, 0) #(self.sessionFiles['DWI'], dwiNodeName, 0)
+            volumeLogic.AddArchetypeVolume(self.sessionFiles['DWI'], dwiNodeName, 0)
+            # ('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr', dwiNodeName, 0)
             if slicer.util.getNode(dwiNodeName) is None:
                 raise IOError("Could not load session file for DWI! File: %s" % self.sessionFiles['DWI'])
             dwiVolumeNode = slicer.util.getNode(dwiNodeName)
@@ -227,6 +227,7 @@ class SlicerDerivedImageEvalLogic(object):
                 values = values + (self.qaValueMap['bad'],)
             else:
                 Exception('Session cannot be changed until all regions are evaluated.  Missing region: %s' % region)
+            values = self.widget.getCheckboxValues() + values
         return values
 
     def onNextButtonClicked(self):
@@ -235,12 +236,15 @@ class SlicerDerivedImageEvalLogic(object):
             evaluations = self.getEvaluationValues()
         except:
             return
-        columns = ('record_id',) # + self.regions
+        # columns = ('record_id',)
+        # for artifact in + self.widget.artifacts:
+        #     for lobe in self.widget.lobes:
+        #         columns = columns + ('%s_%s' % (artifact, lobe),)
         values = (self.sessionFiles['record_id'], ) + evaluations
-        try:
-            self.writeToDatabase(values)
-        except sqlite3.OperationalError:
-            print "Error here"
+        ### HACK
+        print values
+        ###self.writeToDatabase(values)
+        ### END ###
         count = self.count + 1
         if count <= self.maxCount - 1:
             self.count = count
@@ -254,9 +258,11 @@ class SlicerDerivedImageEvalLogic(object):
             evaluations = self.getEvaluationValues()
         except:
             return
-        columns = ('record_id', ) # + self.regions
         values = (self.sessionFiles['record_id'], ) + evaluations
-        self.writeToDatabase(values)
+        ### HACK
+        print values
+        ### self.writeToDatabase(values)
+        ### END ###
         count = self.count - 1
         if count >= 0:
             self.count = count
@@ -271,4 +277,4 @@ class SlicerDerivedImageEvalLogic(object):
         self.loadData()
 
     def exit(self):
-        self.database.unlockRecord('U')
+        pass ### HACK ### self.database.unlockRecord('U')

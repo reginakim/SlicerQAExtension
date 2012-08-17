@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>340</width>
-    <height>236</height>
+    <height>310</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -68,28 +68,28 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="temporal">
+       <widget class="QCheckBox" name="airTissue_temporal">
         <property name="text">
          <string>Temporal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="frontal">
+       <widget class="QCheckBox" name="airTissue_frontal">
         <property name="text">
          <string>Frontal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="occipital">
+       <widget class="QCheckBox" name="airTissue_occipital">
         <property name="text">
          <string>Occipital</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="parietal">
+       <widget class="QCheckBox" name="airTissue_parietal">
         <property name="text">
          <string>Parietal</string>
         </property>
@@ -147,28 +147,28 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="temporal_2">
+       <widget class="QCheckBox" name="cropping_temporal">
         <property name="text">
          <string>Temporal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="frontal_2">
+       <widget class="QCheckBox" name="cropping_frontal">
         <property name="text">
          <string>Frontal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="occipital_2">
+       <widget class="QCheckBox" name="cropping_occipital">
         <property name="text">
          <string>Occipital</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="parietal_2">
+       <widget class="QCheckBox" name="cropping_parietal">
         <property name="text">
          <string>Parietal</string>
         </property>
@@ -194,7 +194,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="dropout">
+    <widget class="QLabel" name="dropOut">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
        <horstretch>0</horstretch>
@@ -214,7 +214,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="dropoutFrame">
+    <widget class="QFrame" name="dropOutFrame">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -226,28 +226,28 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="temporal_3">
+       <widget class="QCheckBox" name="dropOut_temporal">
         <property name="text">
          <string>Temporal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="frontal_3">
+       <widget class="QCheckBox" name="dropOut_frontal">
         <property name="text">
          <string>Frontal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="occipital_3">
+       <widget class="QCheckBox" name="dropOut_occipital">
         <property name="text">
          <string>Occipital</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="parietal_3">
+       <widget class="QCheckBox" name="dropOut_parietal">
         <property name="text">
          <string>Parietal</string>
         </property>
@@ -305,28 +305,28 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="temporal_4">
+       <widget class="QCheckBox" name="interleave_temporal">
         <property name="text">
          <string>Temporal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="frontal_4">
+       <widget class="QCheckBox" name="interleave_frontal">
         <property name="text">
          <string>Frontal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="occipital_4">
+       <widget class="QCheckBox" name="interleave_occipital">
         <property name="text">
          <string>Occipital</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="parietal_4">
+       <widget class="QCheckBox" name="interleave_parietal">
         <property name="text">
          <string>Parietal</string>
         </property>
@@ -372,42 +372,14 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="missingDataFrame">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+    <widget class="QLabel" name="missingUserInfo">
+     <property name="text">
+      <string>Enter a comma-seperated list of values:</string>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <property name="margin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QSpinBox" name="selectMissing"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="addMissing">
-        <property name="text">
-         <string>Add</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
     </widget>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="missingLineEdit"/>
    </item>
   </layout>
  </widget>

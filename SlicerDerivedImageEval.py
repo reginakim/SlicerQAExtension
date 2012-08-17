@@ -33,6 +33,8 @@ class SlicerDerivedImageEval:
 class SlicerDerivedImageEvalWidget:
     def __init__(self, parent=None):
         self.images = ('DWI',)
+        self.artifacts = ('airTissue', 'cropping', 'dropOut', 'interleave', 'missingData')
+        self.lobes = ('frontal', 'occipital', 'parietal', 'temporal')
         self.currentSession = None
         self.imageQAWidget = None
         self.navigationWidget = None
@@ -59,7 +61,6 @@ class SlicerDerivedImageEvalWidget:
         buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
         buttonBox.connect("accepted()", self.grabNotes)
         buttonBox.connect("rejected()", self.cancelNotes)
-        self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
         # Evaluation subsection
         self.imageQAWidget = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
         qaLayout = qt.QVBoxLayout(self.imageQAWidget)
@@ -69,7 +70,6 @@ class SlicerDerivedImageEvalWidget:
         for image in self.images:
             reviewButton = self.reviewButtonFactory(image)
             qaLayout.addWidget(reviewButton)
-        self.connectReviewButtons()
         # batch button
         self.nextButton = qt.QPushButton()
         self.nextButton.setText('Get next DWI')
@@ -77,10 +77,13 @@ class SlicerDerivedImageEvalWidget:
         self.dwiArtifactWidget = self.loadUIFile('Resources/UI/dwiArtifactWidget.ui')
         qaLayout.addWidget(self.dwiArtifactWidget)
         qaLayout.addWidget(self.nextButton)
+        self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
+        qaLayout.addWidget(self.dwiWidget)
         # Add all to layout
         self.layout.addWidget(self.dwiWidget)
         self.layout.addWidget(self.imageQAWidget)
         self.layout.addStretch(1)
+        self.enableRadios(self.images[0])
         self.logic.onGetBatchFilesClicked()
 
     def loadUIFile(self, fileName):
@@ -126,16 +129,6 @@ class SlicerDerivedImageEvalWidget:
         ### self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
         self.quitButton.connect('clicked()', self.exit)
 
-    def connectReviewButtons(self):
-        """ Map the region buttons clicked() signals to the function """
-        self.buttonMapper = qt.QSignalMapper()
-        #self.buttonMapper.connect('mapped(const QString&)', self.logic.selectRegion)
-        self.buttonMapper.connect('mapped(const QString&)', self.enableRadios)
-        for image in self.images:
-            pushButton = self.imageQAWidget.findChild('QPushButton', image)
-            self.buttonMapper.setMapping(pushButton, image)
-            pushButton.connect('clicked()', self.buttonMapper, 'map()')
-
     def enableRadios(self, image):
         """ Enable the radio buttons that match the given region name """
         self.imageQAWidget.findChild("QWidget", image + "_radioWidget").setEnabled(True)
@@ -145,20 +138,14 @@ class SlicerDerivedImageEvalWidget:
             radio.setCheckable(True)
             radio.setEnabled(True)
 
-    def disableRadios(self, image):
-        """ Disable all radio buttons that DO NOT match the given region name """
-        radios = self.imageQAWidget.findChildren("QRadioButton")
-        for radio in radios:
-            if radio.objectName.find(image) == -1:
-                radio.setShortcutEnabled(False)
-                radio.setEnabled(False)
-
     def resetRadioWidgets(self):
         """ Disable and reset all radio buttons in the widget """
         radios = self.imageQAWidget.findChildren("QRadioButton")
         for radio in radios:
             radio.setCheckable(False)
-            radio.setEnabled(False)
+        checkboxess = self.dwiArtifactWidget.findChildren("QCheckBox")
+        for checkbox in checkboxes:
+            checkbox.isChecked(False)
 
     def getRadioValues(self):
         values = ()
@@ -187,6 +174,20 @@ class SlicerDerivedImageEvalWidget:
             values = values + ("NULL",)
         return values
 
+    def getCheckboxValues(self):
+        values = ()
+        needsFollowUp = False
+        checkboxes = self.dwiArtifactWidget.findChildren('QCheckBox')
+        for artifact in self.artifacts:
+            for lobe in self.lobes:
+                for cBox in checkboxes:
+                    if cBox.objectName == artifact + '_' + lobe:
+                        if cBox.checked:
+                            values = values + ('t',)
+                        else:
+                            values = values + ('f',)
+        return values
+
     def resetWidget(self):
         self.resetRadioWidgets()
 
@@ -204,8 +205,8 @@ class SlicerDerivedImageEvalWidget:
         pass
 
     def onGetBatchFilesClicked(self):
-        values = self.getRadioValues()
-        if len(values) >= len(self.images):
+        values = self.getCheckboxValues() + self.getRadioValues()
+        if len(values) >= len(self.images) + 4*4: ### HACK
             self.logic.writeToDatabase(values)
             self.resetWidget()
             self.logic.onGetBatchFilesClicked()
@@ -217,7 +218,7 @@ class SlicerDerivedImageEvalWidget:
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
         values = self.getRadioValues()
-        if len(values) >= len(self.images):
+        if len(values) >= len(self.images) + 4*4: ### HACK
             # TODO: Write a confirmation dialog popup
             pass ### HACK ###
 #            self.logic.writeToDatabase(values)
