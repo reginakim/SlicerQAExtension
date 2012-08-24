@@ -1,0 +1,54 @@
+cmake_minimum_required(VERSION 2.8.7)
+
+#-----------------------------------------------------------------------------
+if(NOT Slicer_SOURCE_DIR)
+  set(EXTENSION_NAME "DWI QA")
+  set(EXTENSION_HOMEPAGE "http://www.slicer.org/slicerWiki/index.php/Documentation/4.1/Extensions/QA/DWI")
+  set(EXTENSION_CATEGORY "Quality Assurance")
+  set(EXTENSION_STATUS "Beta")
+  set(EXTENSION_CONTRIBUTORS "Dave Welch (UIowa), Hans Johnson (UIowa)")
+  set(EXTENSION_DESCRIPTION "A Slicer-based evaluation module for DWI pre-processing")
+  set(EXTENSION_ICONURL "http://viewvc.slicer.org/viewvc.cgi/Slicer4/trunk/Extensions/Testing/DWIPreprocessingQA/Resources/Icons/DWIPreprocessingQA.png?revision=19437&view=co")
+  set(EXTENSION_SCREENSHOTURLS "http://wiki.slicer.org/slicerWiki/images/e/e2/Slicer-r19441-DWIQA-screenshot.png")
+endif()
+
+#-----------------------------------------------------------------------------
+set(MODULE_NAME DWIQA)
+
+#-----------------------------------------------------------------------------
+if(NOT Slicer_SOURCE_DIR)
+  find_package(Slicer REQUIRED)
+  include(${Slicer_USE_FILE})
+endif()
+
+#-----------------------------------------------------------------------------
+set(MODULE_PYTHON_SCRIPTS
+  dwiPreprocessingQA.py
+  logic.py
+  database_helper.py
+  module_locator.py
+  )
+
+set(MODULE_PYTHON_RESOURCES
+  Python/pg8000/__init__.py
+  )
+
+#-----------------------------------------------------------------------------
+ctkMacroCompilePythonScript(
+  TARGET_NAME DWIPreprocessingQA
+  SCRIPTS "${MODULE_PYTHON_SCRIPTS}"
+  RESOURCES "${MODULE_PYTHON_RESOURCES}"
+  DESTINATION_DIR ${CMAKE_BINARY_DIR}/${Slicer_QTSCRIPTEDMODULES_LIB_DIR}
+  INSTALL_DIR ${Slicer_INSTALL_QTSCRIPTEDMODULES_LIB_DIR}
+  NO_INSTALL_SUBDIR
+  )
+
+#-----------------------------------------------------------------------------
+if(BUILD_TESTING)
+  add_subdirectory(Testing)
+endif()
+
+#-----------------------------------------------------------------------------
+if(NOT Slicer_SOURCE_DIR)
+  include(${Slicer_EXTENSION_CPACK})
+endif()
