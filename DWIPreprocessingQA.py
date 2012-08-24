@@ -7,7 +7,7 @@ from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
-import logic
+import dwi_logic
 
 globals()['__file__'] = module_locator.module_path()
 
@@ -21,7 +21,7 @@ globals()['__file__'] = module_locator.module_path()
 
 class DWIPreprocessingQA:
     def __init__(self, parent):
-        parent.title = 'DWI'
+        parent.title = 'DWI Preprocessing'
         parent.categories = ['Quality Assurance']
         parent.dependencies = ['Volumes']
         parent.contributors = ['Dave Welch (UIowa)']
@@ -46,13 +46,13 @@ class DWIPreprocessingQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = logic.DWIPreprocessingQALogic(self, test=True)
+            self.logic = dwi_logic.DWIPreprocessingQALogic(self, test=True)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.DWIPreprocessingQALogic(self, test=True)
+            self.logic = dwi_logic.DWIPreprocessingQALogic(self, test=True)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')

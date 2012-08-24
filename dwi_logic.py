@@ -8,7 +8,7 @@ try:
 except:
     pass
 
-import database_helper
+from dwi_helper import postgresDatabase
 import module_locator
 
 globals()['__file__'] = module_locator.module_path()
@@ -61,7 +61,7 @@ class DWIPreprocessingQALogic(object):
             configFile = os.path.join(__file__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'database.cfg')
+            configFile = os.path.join(__file__, 'dwiPreproc.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -71,7 +71,6 @@ class DWIPreprocessingQALogic(object):
         database = config.get('Postgres', 'Database')
         db_user = config.get('Postgres', 'User')
         password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
-        from database_helper import postgresDatabase
         self.database = postgresDatabase(host, port, db_user, database, password,
                                          self.user_id, self.batchSize)
 

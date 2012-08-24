@@ -7,7 +7,7 @@ from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
-import logic
+import derived_logic as logic
 
 globals()['__file__'] = module_locator.module_path()
 
