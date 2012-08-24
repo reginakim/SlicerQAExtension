@@ -22,7 +22,7 @@ except ImportError:
     raise ImportError
 
 
-class SlicerDerivedImageEvalLogic(object):
+class DerivedImageQALogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self, widget, test=False):
         self.widget = widget
