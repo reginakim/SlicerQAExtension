@@ -61,7 +61,7 @@ class DerivedImageQALogic(object):
             configFile = os.path.join(__file__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'derivedImage.cfg')
+            configFile = os.path.join(__file__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))

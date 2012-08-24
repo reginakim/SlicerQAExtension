@@ -61,7 +61,7 @@ class DWIPreprocessingQALogic(object):
             configFile = os.path.join(__file__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'dwiPreproc.cfg')
+            configFile = os.path.join(__file__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -165,16 +165,12 @@ class DWIPreprocessingQALogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        ### HACK
-        ### outputDir = os.path.join(baseDirectory, 'DTIPrepOutput')
-        ### outputList = os.listdir(outputDir)
-        ### for item in outputList:
-        ###     if item.rfind('_QCed.nrrd') >= 0:
-        ###         sessionFiles['DWI'] = os.path.join(outputDir, item)
-        ###         break
-        outputDir = baseDirectory
-        sessionFiles['DWI'] = os.path.join(outputDir, 'dwi.nhdr')
-        ### END ###
+        outputDir = os.path.join(baseDirectory, 'DTIPrepOutput')
+        outputList = os.listdir(outputDir)
+        for item in outputList:
+            if item.rfind('_QCed.nrrd') >= 0:
+                sessionFiles['DWI'] = os.path.join(outputDir, item)
+                break
         if not 'DWI' in sessionFiles.keys():
             raise IOError("File ending in _QCed.nrrd could not be found in directory %s" % outputDir)
         self.sessionFiles = sessionFiles

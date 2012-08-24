@@ -46,13 +46,13 @@ class DWIPreprocessingQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = dwi_logic.DWIPreprocessingQALogic(self, test=True)
+            self.logic = dwi_logic.DWIPreprocessingQALogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = dwi_logic.DWIPreprocessingQALogic(self, test=True)
+            self.logic = dwi_logic.DWIPreprocessingQALogic(self)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
