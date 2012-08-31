@@ -1,11 +1,14 @@
 import os
 
-from __main__ import ctk
-from __main__ import qt
-from __main__ import slicer
-from __main__ import vtk
+try:
+    from __main__ import ctk
+    from __main__ import qt
+    from __main__ import slicer
+    from __main__ import vtk
+except:
+    pass
 
-import database_helper
+from dwi_helper import postgresDatabase
 import module_locator
 
 globals()['__file__'] = module_locator.module_path()
@@ -19,11 +22,10 @@ except ImportError:
     raise ImportError
 
 
-class SlicerDerivedImageEvalLogic(object):
+class DWIPreprocessingQALogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self, widget, test=False):
         self.widget = widget
-        self.regions = self.widget.regions
         self.images = self.widget.images
         self.qaValueMap = {'good':'1', 'bad':'0', 'follow up':'-1'}
         self.colorTable = "IPL-BrainAtlas-ColorFile.txt"
@@ -35,19 +37,31 @@ class SlicerDerivedImageEvalLogic(object):
         self.count = 0 # Starting value
         self.maxCount = 0
         self.currentSession = None
-        self.currentValues = (None,)*len(self.images + self.regions)
+        self.currentValues = (None,)*len(self.images)
         self.sessionFiles = {}
         self.testing = test
         self.setup()
 
     def setup(self):
-        self.createColorTable()
+        """ Setup module logic
+
+        >>> class widget(object):
+        ...   def __init__(self, input):
+        ...     self.images = (input,)
+        ...
+
+        >>> widget = widget('DWI')
+        >>> logic = DWIPreprocessingQALogic(widget, True)
+        >>> logic.database.database == 'test' and logic.database.host == 'psych-db.psychiatry.uiowa.edu' and logic.database.password == 'test' and logic.database.login == 'user1' and logic.database.pguser == 'test'
+        True
+        """
+        # self.createColorTable()
         config = cParser.SafeConfigParser()
         if self.testing:
             configFile = os.path.join(__file__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'database.cfg')
+            configFile = os.path.join(__file__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -57,11 +71,7 @@ class SlicerDerivedImageEvalLogic(object):
         database = config.get('Postgres', 'Database')
         db_user = config.get('Postgres', 'User')
         password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
-        #        import hashlib as md5
-        from database_helper import postgresDatabase
-        print host, port, database, db_user, password
-        #        md5Password = md5.new(password)
-        self.database = postgresDatabase(host, port, database, db_user, password, # md5Password.digest(),
+        self.database = postgresDatabase(host, port, db_user, database, password,
                                          self.user_id, self.batchSize)
 
     def createColorTable(self):
@@ -113,17 +123,11 @@ class SlicerDerivedImageEvalLogic(object):
         print "Cancelled!"
 
     def writeToDatabase(self, evaluations):
-        if self.testing:
-            recordID = str(self.batchRows[self.count]['record_id'])
-        else:
-            recordID = self.batchRows[self.count][0]
+        recordID = self.batchRows[self.count][0]
         values = (recordID,) + evaluations
         try:
-            if self.testing:
-                self.database.writeAndUnlockRecord(values)
-            else:
-                self.database.writeReview(values)
-                self.database.unlockRecord('R', recordID)
+            self.database.writeReview(values)
+            self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
             print "Error writing to database!"
@@ -141,7 +145,10 @@ class SlicerDerivedImageEvalLogic(object):
     def onGetBatchFilesClicked(self):
         """ """
         self.count = 0
+        ### HACK
+        ### self.batchRows = [(0, 'src', 'Slicer-extensions', 'SlicerQAExtension', 'DWI', '/scratch/welchdm')]
         self.batchRows = self.database.lockAndReadRecords()
+        ### END ###
         self.maxCount = len(self.batchRows)
         self.constructFilePaths()
         self.setCurrentSession()
@@ -158,17 +165,17 @@ class SlicerDerivedImageEvalLogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        sessionFiles['t1_average'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
-        sessionFiles['t2_average'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
-        for regionName in self.regions:
-            if regionName == 'labels_tissue':
-                sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
-            else:
-                fileName = self._getLabelFileNameFromRegion(regionName)
-                sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+        outputDir = os.path.join(baseDirectory, 'DTIPrepOutput')
+        outputList = os.listdir(outputDir)
+        for item in outputList:
+            if item.rfind('_QCed.nrrd') >= 0:
+                sessionFiles['DWI'] = os.path.join(outputDir, item)
+                break
+        if not 'DWI' in sessionFiles.keys():
+            raise IOError("File ending in _QCed.nrrd could not be found in directory %s" % outputDir)
         self.sessionFiles = sessionFiles
         # Verify that the files exist
-        for key in self.images + self.regions:
+        for key in self.images:
             if not os.path.exists(self.sessionFiles[key]):
                 print "File not found: %s\nSkipping session..." % self.sessionFiles[key]
                 # raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
@@ -182,39 +189,24 @@ class SlicerDerivedImageEvalLogic(object):
         """ Load some default data for development and set up a viewing scenario for it.
         """
         dataDialog = qt.QPushButton();
-        dataDialog.setText('Loading files for session %s...' % self.currentSession);
+        dataDialog.setText('Loading file for session %s...' % self.currentSession);
         dataDialog.show()
         volumeLogic = slicer.modules.volumes.logic()
-        t1NodeName = '%s_t1_average' % self.currentSession
-        t1VolumeNode = slicer.util.getNode(t1NodeName)
-        if t1VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0)
-            if slicer.util.getNode(t1NodeName) is None:
-                raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['t1_average'])
-            t1VolumeNode = slicer.util.getNode(t1NodeName)
-            t1VolumeNode.CreateDefaultDisplayNodes()
-            t1VolumeNode.GetDisplayNode().AutoWindowLevelOn()
-        t2NodeName = '%s_t2_average' % self.currentSession
-        t2VolumeNode = slicer.util.getNode(t2NodeName)
-        if t2VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0)
-            if slicer.util.getNode(t2NodeName) is None:
-                raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['t2_average'])
-            t2VolumeNode = slicer.util.getNode(t2NodeName)
-            t2VolumeNode.CreateDefaultDisplayNodes()
-            t2VolumeNode.GetDisplayNode().AutoWindowLevelOn()
-        for region in self.regions:
-            regionNodeName = '%s_%s' % (self.currentSession, region)
-            regionNode = slicer.util.getNode(regionNodeName)
-            if regionNode is None:
-                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
-                if slicer.util.getNode(regionNodeName) is None:
-                    raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
-                regionNode = slicer.util.getNode(regionNodeName)
-                displayNode = slicer.vtkMRMLLabelMapVolumeDisplayNode()
-                slicer.mrmlScene.AddNode(displayNode)
-                regionNode.SetAndObserveNthDisplayNodeID(0, displayNode.GetID())
+        dwiNodeName = '%s_dwi' % self.currentSession
+        dwiVolumeNode = slicer.util.getNode(dwiNodeName)
+        if dwiVolumeNode is None:
+            ### HACK
+            volumeLogic.AddArchetypeVolume(self.sessionFiles['DWI'], dwiNodeName, 0)
+            # ('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr', dwiNodeName, 0)
+            ### END ###
+            if slicer.util.getNode(dwiNodeName) is None:
+                raise IOError("Could not load session file for DWI! File: %s" % self.sessionFiles['DWI'])
+            dwiVolumeNode = slicer.util.getNode(dwiNodeName)
+            dwiVolumeNode.CreateDefaultDisplayNodes()
+            dwiVolumeNode.GetDisplayNode().AutoWindowLevelOn()
         dataDialog.close()
+        self.loadBackgroundNodeToMRMLScene(dwiVolumeNode)
+        self.widget.dwiWidget.setMRMLVolumeNode(dwiVolumeNode)
 
     def loadBackgroundNodeToMRMLScene(self, volumeNode):
         # Set up template scene
@@ -230,7 +222,7 @@ class SlicerDerivedImageEvalLogic(object):
     def getEvaluationValues(self):
         """ Get the evaluation values from the widget """
         values = ()
-        for region in self.regions:
+        for region in self.images:
             goodButton, badButton = self.widget._findRadioButtons(region)
             if goodButton.isChecked():
                 values = values + (self.qaValueMap['good'],)
@@ -238,6 +230,7 @@ class SlicerDerivedImageEvalLogic(object):
                 values = values + (self.qaValueMap['bad'],)
             else:
                 Exception('Session cannot be changed until all regions are evaluated.  Missing region: %s' % region)
+            values = self.widget.getCheckboxValues() + values
         return values
 
     def onNextButtonClicked(self):
@@ -246,12 +239,15 @@ class SlicerDerivedImageEvalLogic(object):
             evaluations = self.getEvaluationValues()
         except:
             return
-        columns = ('record_id',) + self.regions
+        # columns = ('record_id',)
+        # for artifact in + self.widget.artifacts:
+        #     for lobe in self.widget.lobes:
+        #         columns = columns + ('%s_%s' % (artifact, lobe),)
         values = (self.sessionFiles['record_id'], ) + evaluations
-        try:
-            self.writeToDatabase(values)
-        except sqlite3.OperationalError:
-            print "Error here"
+        ### HACK
+        print values
+        ###self.writeToDatabase(values)
+        ### END ###
         count = self.count + 1
         if count <= self.maxCount - 1:
             self.count = count
@@ -265,9 +261,11 @@ class SlicerDerivedImageEvalLogic(object):
             evaluations = self.getEvaluationValues()
         except:
             return
-        columns = ('record_id', ) + self.regions
         values = (self.sessionFiles['record_id'], ) + evaluations
-        self.writeToDatabase(values)
+        ### HACK
+        print values
+        ### self.writeToDatabase(values)
+        ### END ###
         count = self.count - 1
         if count >= 0:
             self.count = count
@@ -283,3 +281,7 @@ class SlicerDerivedImageEvalLogic(object):
 
     def exit(self):
         self.database.unlockRecord('U')
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
