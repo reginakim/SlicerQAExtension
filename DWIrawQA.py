@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import re
 
 from __main__ import ctk
 from __main__ import qt
@@ -7,7 +8,8 @@ from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
-import dwi_logic
+### HACK ###
+### import dwi_raw_logic
 
 globals()['__file__'] = module_locator.module_path()
 
@@ -19,7 +21,7 @@ globals()['__file__'] = module_locator.module_path()
 #     print "External modules not found!"
 #     raise ImportError
 
-class DWIPreprocessingQA:
+class DWIrawQA:
     def __init__(self, parent):
         parent.title = 'DWI Raw Inspection'
         parent.categories = ['Quality Assurance']
@@ -30,39 +32,33 @@ class DWIPreprocessingQA:
         self.parent = parent
 
 
-class DWIPreprocessingQAWidget:
+class DWIrawQAWidget:
     def __init__(self, parent=None):
         self.images = ('DWI',)
         self.htmlFileName = ('dwi_raw_1', 'dwi_raw_2',
                              'dwi_raw_3', 'dwi_raw_4')
+        self.css = None
         self.currentSession = None
-        self.imageQAWidget = None
         self.navigationWidget = None
-        self.followUpDialog = None
-        self.notes = None
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = dwi_raw_logic.DWIRawQALogic(self)
+            ### HACK ###
+            ### self.logic = dwi_raw_logic.DWIRawQALogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = dwi_raw_logic.DWIRawQALogic(self)
+            ### HACK ###
+            ### self.logic = dwi_raw_logic.DWIRawQALogic(self)
 
     def setup(self):
-        self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
-        self.clipboard = qt.QApplication.clipboard()
-        self.textEditor = self.followUpDialog.findChild("QTextEdit", "textEditor")
-        buttonBox = self.followUpDialog.findChild("QDialogButtonBox", "buttonBox")
-        buttonBox.connect("accepted()", self.grabNotes)
-        buttonBox.connect("rejected()", self.cancelNotes)
         # Evaluation subsection
-        self.imageQAWidget = self.loadUIFile('Resources/UI/imageQACollapsibleButton.ui')
+        self.imageQAWidget = self.loadUIFile('Resources/UI/queryQACollapsibleButton.ui')
         qaLayout = qt.QVBoxLayout(self.imageQAWidget)
         qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "titleFrame"))
         qaLayout.addWidget(self.imageQAWidget.findChild("QFrame", "tableVLine"))
@@ -70,6 +66,7 @@ class DWIPreprocessingQAWidget:
         for question in self.htmlFileName:
             reviewButton = self.reviewButtonFactory(question)
             qaLayout.addWidget(reviewButton)
+            self.enableRadios(question)
         # batch button
         self.nextButton = qt.QPushButton()
         self.nextButton.setText('Get next raw DWI')
@@ -79,8 +76,8 @@ class DWIPreprocessingQAWidget:
         qaLayout.addWidget(self.dwiWidget)
         # Add all to layout
         self.layout.addWidget(self.dwiWidget)
+        self.layout.addWidget(self.imageQAWidget)
         self.layout.addStretch(1)
-        self.enableRadios(self.htmlFileName[0])
         ### HACK ###
         ### self.logic.onGetBatchFilesClicked()
 
@@ -96,28 +93,43 @@ class DWIPreprocessingQAWidget:
 
     def reviewButtonFactory(self, question):
         widget = self.loadUIFile('Resources/UI/dwiRawQuestionWidget.ui')
-        # Set push button
-        # TODO: Remove all pushButton references
+        # Set question label text
         questionLabel= widget.findChild("QLabel", "questionTextLabel")
         questionLabel.objectName = question
         questionLabel.setText(self._readHTML(question))
-        # TODO: Convert push button to label
+        # Set and rename radio buttons
         radioContainer = widget.findChild("QWidget", "radioWidget")
         radioContainer.objectName = question + "_radioWidget"
-        # Set radio buttons
         yesButton = widget.findChild("QRadioButton", "yesButton")
         yesButton.objectName = question + "_yes"
         noButton = widget.findChild("QRadioButton", "noButton")
         noButton.objectName = question + "_no"
         return widget
 
-    def _readHTML(self, question):
-        fullPath = os.path.join(__file__, 'Resources/HTML', question + '.html')
+    def _readCSS(self):
+        fullPath = os.path.join('/scratch1/welchdm/src/Slicer-extensions/SlicerQAExtension',
+                                'Resources/HTML',
+                                'dwi_raw.css')
         fID = open(fullPath)
+        try:
+            self.css = fID.read()
+        finally:
+            fID.close()
+
+    def _readHTML(self, question):
+        if self.css is None:
+            self._readCSS()
+        fullPath = os.path.join('/scratch1/welchdm/src/Slicer-extensions/SlicerQAExtension',
+                                'Resources/HTML',
+                                question + '.html')
+        fID = open(fullPath)
+        text = ''
         try:
             text = fID.read()
         finally:
             fID.close()
+        if not text == '':
+            text = re.sub(r'CSS_FILE', self.css, text)
         return text
 
     def connectSessionButtons(self):
@@ -127,11 +139,11 @@ class DWIPreprocessingQAWidget:
         ### self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
         self.quitButton.connect('clicked()', self.exit)
 
-    def enableRadios(self, image):
+    def enableRadios(self, question):
         """ Enable the radio buttons that match the given region name """
-        self.imageQAWidget.findChild("QWidget", image + "_radioWidget").setEnabled(True)
+        self.imageQAWidget.findChild("QWidget", question + "_radioWidget").setEnabled(True)
         for suffix in ("_yes", "_no"):
-            radio = self.imageQAWidget.findChild("QRadioButton", image + suffix)
+            radio = self.imageQAWidget.findChild("QRadioButton", question + suffix)
             radio.setShortcutEnabled(True)
             radio.setCheckable(True)
             radio.setEnabled(True)
@@ -171,8 +183,8 @@ class DWIPreprocessingQAWidget:
     def checkValues(self):
         values = self.getValues()
         if len(values) >= len(self.htmlFileName):
-            print values ### HACK
-            self.logic.writeToDatabase(values)
+            ### HACK ###
+            ### self.logic.writeToDatabase(values)
             self.resetWidget()
             return (0, values)
         elif len(values) == 0:
@@ -187,14 +199,19 @@ class DWIPreprocessingQAWidget:
     def onGetBatchFilesClicked(self):
         (code, values) = self.checkValues()
         if code == 0:
-            self.logic.writeToDatabase(values)
-            self.logic.onGetBatchFilesClicked()
+            ### HACK ###
+            ### self.logic.writeToDatabase(values)
+            ### self.logic.onGetBatchFilesClicked()
+            pass ### END HACK ###
         else:
             pass
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        (code, values) = self.checkValues()
+        ### HACK ###
+        ### (code, values) = self.checkValues()
+        code = 99
+        ### END HACK ###
         if code == 0:
             # TODO: Write a confirmation dialog popup
             self.logic.writeToDatabase(values)
@@ -204,5 +221,7 @@ class DWIPreprocessingQAWidget:
             self.logic.exit()
         else:
             # TODO: write a prompt window
-            self.logic.exit()
+            ### HACK ###
+            ### self.logic.exit()
+            pass ### END HACK ###
             # TODO: clear scene
