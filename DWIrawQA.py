@@ -8,8 +8,7 @@ from __main__ import slicer
 from __main__ import vtk
 
 import module_locator
-### HACK ###
-### import dwi_raw_logic
+import dwi_raw_logic
 
 globals()['__file__'] = module_locator.module_path()
 
@@ -34,27 +33,25 @@ class DWIrawQA:
 
 class DWIrawQAWidget:
     def __init__(self, parent=None):
-        self.images = ('DWI',)
         self.htmlFileName = ('dwi_raw_1', 'dwi_raw_2',
                              'dwi_raw_3', 'dwi_raw_4')
         self.css = None
         self.currentSession = None
         self.navigationWidget = None
+        self.gradientDisplayWidget = None
         # Handle the UI display with/without Slicer
         if parent is None:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            ### HACK ###
-            ### self.logic = dwi_raw_logic.DWIRawQALogic(self)
+            self.logic = dwi_raw_logic.DWIRawQALogic(self, False)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            ### HACK ###
-            ### self.logic = dwi_raw_logic.DWIRawQALogic(self)
+            self.logic = dwi_raw_logic.DWIRawQALogic(self, False)
 
     def setup(self):
         # Evaluation subsection
@@ -67,19 +64,22 @@ class DWIrawQAWidget:
             reviewButton = self.reviewButtonFactory(question)
             qaLayout.addWidget(reviewButton)
             self.enableRadios(question)
+        # DWI display widget
+        self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
+        qaLayout.addWidget(self.dwiWidget)
         # batch button
         self.nextButton = qt.QPushButton()
         self.nextButton.setText('Get next raw DWI')
         self.nextButton.connect('clicked(bool)', self.onGetBatchFilesClicked)
         qaLayout.addWidget(self.nextButton)
-        self.dwiWidget = slicer.modulewidget.qSlicerDiffusionWeightedVolumeDisplayWidget()
-        qaLayout.addWidget(self.dwiWidget)
         # Add all to layout
-        self.layout.addWidget(self.dwiWidget)
         self.layout.addWidget(self.imageQAWidget)
+        self.layout.addWidget(self.dwiWidget)
         self.layout.addStretch(1)
-        ### HACK ###
-        ### self.logic.onGetBatchFilesClicked()
+        # Get popup window widget
+        self.gradientDisplayWidget = self.loadUIFile('Resources/UI/followUpDialog.ui')
+        # Initialize data
+        self.logic.onGetBatchFilesClicked()
 
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
@@ -162,18 +162,17 @@ class DWIrawQAWidget:
             for radio in radios:
                 if radio.objectName.find(question) > -1 and radio.checked:
                     if radio.objectName.find("_yes") > -1:
-                        values = values + (1,)
+                        values = values + (True,)
                     elif radio.objectName.find("_no") > -1:
-                        values = values + (0,)
+                        values = values + (False,)
                     else:
                         values = values + ("NULL",)
                         print "Warning: No value for %s" % question
-        else:
-            values = values + ("NULL",)
         return values
 
     def resetWidget(self):
         self.resetRadioWidgets()
+        self.gradientDisplayWidget.close()
         ### TODO: self.resetDWIwidget()
 
     def getValues(self):
@@ -182,9 +181,7 @@ class DWIrawQAWidget:
 
     def checkValues(self):
         values = self.getValues()
-        if len(values) >= len(self.htmlFileName):
-            ### HACK ###
-            ### self.logic.writeToDatabase(values)
+        if len(values) == len(self.htmlFileName):
             self.resetWidget()
             return (0, values)
         elif len(values) == 0:
@@ -199,19 +196,15 @@ class DWIrawQAWidget:
     def onGetBatchFilesClicked(self):
         (code, values) = self.checkValues()
         if code == 0:
-            ### HACK ###
-            ### self.logic.writeToDatabase(values)
-            ### self.logic.onGetBatchFilesClicked()
-            pass ### END HACK ###
+            self.logic.writeToDatabase(values)
+            self.gradientDisplayWidget.close()
+            self.logic.onGetBatchFilesClicked()
         else:
             pass
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """
-        ### HACK ###
-        ### (code, values) = self.checkValues()
-        code = 99
-        ### END HACK ###
+        (code, values) = self.checkValues()
         if code == 0:
             # TODO: Write a confirmation dialog popup
             self.logic.writeToDatabase(values)
@@ -221,7 +214,14 @@ class DWIrawQAWidget:
             self.logic.exit()
         else:
             # TODO: write a prompt window
-            ### HACK ###
-            ### self.logic.exit()
-            pass ### END HACK ###
+            self.logic.exit()
             # TODO: clear scene
+        self.gradientDisplayWidget.close()
+
+    def displayGradients(self, gradients):
+        string = '\n'.join(item for item in gradients)
+        self.gradientDisplayWidget.setWindowTitle('Gradient directions for session %s' % self.logic.sessionFile['session'])
+        editor = self.gradientDisplayWidget.findChild('QTextEdit')
+        editor.setText(string)
+        editor.setReadOnly(True)
+        self.gradientDisplayWidget.show()
