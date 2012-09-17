@@ -228,8 +228,7 @@ class DWIrawQAWidget:
 
     def displayGradients(self, gradients):
         string = '\n'.join(item for item in gradients)
-        self.gradientDisplayWidget.setWindowTitle('Gradient directions for \n \
-                                                   file %s' % self.logic.sessionFile['file'])
+        self.gradientDisplayWidget.setWindowTitle('Gradient directions: %s' % self.logic.sessionFile['file'])
         editor = self.gradientDisplayWidget.findChild('QTextEdit')
         editor.setText(string)
         editor.setReadOnly(True)
