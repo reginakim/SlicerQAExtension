@@ -7,10 +7,10 @@ from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
-import module_locator
-import dwi_raw_logic
+from QALib.dwi_raw import *
+from QALib.dwi_raw import __slicer_module__
 
-globals()['__file__'] = module_locator.module_path()
+# globals()['__file__'] = module_locator.module_path()
 
 ### TODO: Add logging
 # try:
@@ -45,13 +45,13 @@ class DWIrawQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = dwi_raw_logic.DWIRawQALogic(self, False)
+            self.logic = logic.DWIRawQALogic(self, False)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = dwi_raw_logic.DWIRawQALogic(self, False)
+            self.logic = logic.DWIRawQALogic(self, False)
 
     def setup(self):
         # Evaluation subsection
@@ -84,7 +84,7 @@ class DWIrawQAWidget:
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile(os.path.join(__file__, fileName))
+        qfile = qt.QFile(os.path.join(__slicer_module__, fileName))
         qfile.open(qt.QFile.ReadOnly)
         try:
             return uiloader.load(qfile)
@@ -107,7 +107,7 @@ class DWIrawQAWidget:
         return widget
 
     def _readCSS(self):
-        fullPath = os.path.join(__file__,
+        fullPath = os.path.join(__slicer_module__,
                                 'Resources/HTML',
                                 'dwi_raw.css')
         fID = open(fullPath)
@@ -119,7 +119,7 @@ class DWIrawQAWidget:
     def _readHTML(self, question):
         if self.css is None:
             self._readCSS()
-        fullPath = os.path.join(__file__,
+        fullPath = os.path.join(__slicer_module__,
                                 'Resources/HTML',
                                 question + '.html')
         fID = open(fullPath)

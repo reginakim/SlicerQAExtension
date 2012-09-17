@@ -8,11 +8,7 @@ try:
 except:
     pass
 
-from dwi_raw_helper import postgresDatabase
-import dwi_raw_reader as dwiReader
-import module_locator
-
-globals()['__file__'] = module_locator.module_path()
+from . import __slicer_module__, postgresDatabase, dwiReader
 
 try:
     import ConfigParser as cParser
@@ -56,10 +52,10 @@ class DWIRawQALogic(object):
         """
         config = cParser.SafeConfigParser()
         if self.testing:
-            configFile = os.path.join(__file__, 'test.cfg')
+            configFile = os.path.join(__slicer_module__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'autoworkup.cfg')
+            configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -108,7 +104,7 @@ class DWIRawQALogic(object):
         self.constructFilePaths()
         self.setCurrentSession()
         self.loadData()
-        gradientList = dwiReader.getGradients(self.sessionFile['filePath'])
+        gradientList = dwiReader(self.sessionFile['filePath'])
         self.widget.displayGradients(gradientList)
 
     def setCurrentSession(self):
