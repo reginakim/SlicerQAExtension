@@ -8,10 +8,7 @@ try:
 except:
     pass
 
-from derived_helper import postgresDatabase
-import module_locator
-
-globals()['__file__'] = module_locator.module_path()
+from . import __slicer_module__, postgresDatabase, dwiReader
 
 try:
     import ConfigParser as cParser
@@ -22,14 +19,12 @@ except ImportError:
     raise ImportError
 
 
-class DerivedImageQALogic(object):
+class DWIRawQALogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self, widget, test=False):
         self.widget = widget
-        self.images = self.widget.images
-        self.qaValueMap = {'good':'1', 'bad':'0', 'follow up':'-1'}
-        self.colorTable = "IPL-BrainAtlas-ColorFile.txt"
-        self.colorTableNode = None
+        self.questions = self.widget.htmlFileName
+        self.qaValueMap = {'yes':'1', 'no':'0'}
         self.user_id = None
         self.database = None
         self.batchSize = 1
@@ -37,8 +32,8 @@ class DerivedImageQALogic(object):
         self.count = 0 # Starting value
         self.maxCount = 0
         self.currentSession = None
-        self.currentValues = (None,)*len(self.images)
-        self.sessionFiles = {}
+        self.currentValues = (None,)*len(self.questions)
+        self.sessionFile = {}
         self.testing = test
         self.setup()
 
@@ -51,17 +46,16 @@ class DerivedImageQALogic(object):
         ...
 
         >>> widget = widget('DWI')
-        >>> logic = SlicerDerivedImageEvalLogic(widget, True)
+        >>> logic = DWIPreprocessingQALogic(widget, True)
         >>> logic.database.database == 'test' and logic.database.host == 'psych-db.psychiatry.uiowa.edu' and logic.database.password == 'test' and logic.database.login == 'user1' and logic.database.pguser == 'test'
         True
         """
-        # self.createColorTable()
         config = cParser.SafeConfigParser()
         if self.testing:
-            configFile = os.path.join(__file__, 'test.cfg')
+            configFile = os.path.join(__slicer_module__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'autoworkup.cfg')
+            configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -74,43 +68,12 @@ class DerivedImageQALogic(object):
         self.database = postgresDatabase(host, port, db_user, database, password,
                                          self.user_id, self.batchSize)
 
-    def createColorTable(self):
-        """
-        """
-        self.colorTableNode = slicer.vtkMRMLColorTableNode()
-        self.colorTableNode.SetFileName(os.path.join(__file__, 'Resources', 'ColorFile', self.colorTable))
-        self.colorTableNode.SetName(self.colorTable[:-4])
-        storage = self.colorTableNode.CreateDefaultStorageNode()
-        slicer.mrmlScene.AddNode(storage)
-        self.colorTableNode.AddAndObserveStorageNodeID(storage.GetID())
-        slicer.mrmlScene.AddNode(self.colorTableNode)
-        storage.SetFileName(self.colorTableNode.GetFileName())
-        storage.SetReadState(True)
-        storage.ReadData(self.colorTableNode, True)
-
-    def addEntryToColorTable(self, buttonName):
-        lTable = self.colorTableNode.GetLookupTable()
-        colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)
-        color = lTable.GetTableValue(colorIndex)
-        self.colorTableNode.AddColor(buttonName, *color)
-
     def selectRegion(self, buttonName):
-        """ Load the outline of the selected region into the scene
+        """ Load the raw DWI image
         """
         nodeName = self.constructLabelNodeName(buttonName)
-        labelNode = slicer.util.getNode(nodeName)
-        if labelNode.GetLabelMap():
-            labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
-            compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
-            for compositeNode in compositeNodes.values():
-                compositeNode.SetLabelVolumeID(labelNode.GetID())
-                compositeNode.SetLabelOpacity(1.0)
-            # Set the label outline to ON
-            sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
-            for sliceNode in sliceNodes.values():
-                sliceNode.UseLabelOutlineOn()
-        else:
-             self.loadBackgroundNodeToMRMLScene(labelNode)
+        dwiNode = slicer.util.getNode(nodeName)
+        self.loadBackgroundNodeToMRMLScene(dwiNode)
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
@@ -133,61 +96,39 @@ class DerivedImageQALogic(object):
             print "Error writing to database!"
             raise
 
-    def _getLabelFileNameFromRegion(self, regionName):
-        try:
-            region, side = regionName.split('_')
-            fileName = '_'.join([side[0], region.capitalize(), 'seg.nii.gz'])
-        except ValueError:
-            region = regionName
-            fileName = '_'.join([region, 'seg.nii.gz'])
-        return fileName
-
     def onGetBatchFilesClicked(self):
         """ """
         self.count = 0
-        ### HACK
-        ### self.batchRows = [(0, 'src', 'Slicer-extensions', 'SlicerQAExtension', 'DWI', '/scratch/welchdm')]
         self.batchRows = self.database.lockAndReadRecords()
-        ### END ###
         self.maxCount = len(self.batchRows)
         self.constructFilePaths()
         self.setCurrentSession()
         self.loadData()
+        gradientList = dwiReader(self.sessionFile['filePath'])
+        self.widget.displayGradients(gradientList)
 
     def setCurrentSession(self):
-        self.currentSession = self.sessionFiles['session']
+        self.currentSession = self.sessionFile['session']
         self.widget.currentSession = self.currentSession
 
     def constructFilePaths(self):
         row = self.batchRows[self.count]
-        sessionFiles = {}
-        # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
-        baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
-        sessionFiles['session'] = row[4]
-        sessionFiles['record_id'] = row[0]
-        ### HACK
-        ### outputDir = os.path.join(baseDirectory, 'DTIPrepOutput')
-        ### outputList = os.listdir(outputDir)
-        ### for item in outputList:
-        ###     if item.rfind('_QCed.nrrd') >= 0:
-        ###         sessionFiles['DWI'] = os.path.join(outputDir, item)
-        ###         break
-        outputDir = baseDirectory
-        sessionFiles['DWI'] = os.path.join(outputDir, 'dwi.nhdr')
-        ### END ###
-        if not 'DWI' in sessionFiles.keys():
-            raise IOError("File ending in _QCed.nrrd could not be found in directory %s" % outputDir)
-        self.sessionFiles = sessionFiles
+        self.sessionFile = {}
+        baseDirectory = os.path.join(row[1], row[2], row[3], row[4], row[5])
+        fileName = '%s_%s_%s.nrrd' % (row[3], row[4], row[6])
+        self.sessionFile['file'] = fileName
+        self.sessionFile['filePath'] = os.path.join(baseDirectory, fileName)
+        self.sessionFile['session'] = row[4]
+        self.sessionFile['record_id'] = row[0]
         # Verify that the files exist
-        for key in self.images:
-            if not os.path.exists(self.sessionFiles[key]):
-                print "File not found: %s\nSkipping session..." % self.sessionFiles[key]
-                # raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
-                self.database.unlockRecord('M', self.sessionFiles['record_id'])
-                self.onGetBatchFilesClicked()
-                # TODO: Generalize for a batch size > 1
-                # for count in range(self.maxCount - self.count):
-                #     print "This is the count: %d" % count
+        if not os.path.exists(self.sessionFile['filePath']):
+            print "File not found: %s\nSkipping session..." % self.sessionFile[key]
+            # raise IOError("File not found!\nFile: %s" % self.sessionFile[key])
+            self.database.unlockRecord('M', self.sessionFile['record_id'])
+            self.onGetBatchFilesClicked()
+            # TODO: Generalize for a batch size > 1
+            # for count in range(self.maxCount - self.count):
+            #     print "This is the count: %d" % count
 
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
@@ -196,15 +137,12 @@ class DerivedImageQALogic(object):
         dataDialog.setText('Loading file for session %s...' % self.currentSession);
         dataDialog.show()
         volumeLogic = slicer.modules.volumes.logic()
-        dwiNodeName = '%s_dwi' % self.currentSession
+        dwiNodeName = '%s_dwi_raw' % self.currentSession
         dwiVolumeNode = slicer.util.getNode(dwiNodeName)
         if dwiVolumeNode is None:
-            ### HACK
-            volumeLogic.AddArchetypeVolume(self.sessionFiles['DWI'], dwiNodeName, 0)
-            # ('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr', dwiNodeName, 0)
-            ### END ###
+            volumeLogic.AddArchetypeVolume(self.sessionFile['filePath'], dwiNodeName, 0)
             if slicer.util.getNode(dwiNodeName) is None:
-                raise IOError("Could not load session file for DWI! File: %s" % self.sessionFiles['DWI'])
+                raise IOError("Could not load session file for DWI! File: %s" % self.sessionFile['DWI'])
             dwiVolumeNode = slicer.util.getNode(dwiNodeName)
             dwiVolumeNode.CreateDefaultDisplayNodes()
             dwiVolumeNode.GetDisplayNode().AutoWindowLevelOn()
@@ -226,15 +164,14 @@ class DerivedImageQALogic(object):
     def getEvaluationValues(self):
         """ Get the evaluation values from the widget """
         values = ()
-        for region in self.images:
-            goodButton, badButton = self.widget._findRadioButtons(region)
-            if goodButton.isChecked():
-                values = values + (self.qaValueMap['good'],)
-            elif badButton.isChecked():
-                values = values + (self.qaValueMap['bad'],)
+        for query in self.questions:
+            yesButton, noButton = self.widget._findRadioButtons(query)
+            if yesButton.isChecked():
+                values = values + (self.qaValueMap['yes'],)
+            elif noButton.isChecked():
+                values = values + (self.qaValueMap['no'],)
             else:
                 Exception('Session cannot be changed until all regions are evaluated.  Missing region: %s' % region)
-            values = self.widget.getCheckboxValues() + values
         return values
 
     def onNextButtonClicked(self):
@@ -247,7 +184,7 @@ class DerivedImageQALogic(object):
         # for artifact in + self.widget.artifacts:
         #     for lobe in self.widget.lobes:
         #         columns = columns + ('%s_%s' % (artifact, lobe),)
-        values = (self.sessionFiles['record_id'], ) + evaluations
+        values = (self.sessionFile['record_id'], ) + evaluations
         ### HACK
         print values
         ###self.writeToDatabase(values)
@@ -265,7 +202,7 @@ class DerivedImageQALogic(object):
             evaluations = self.getEvaluationValues()
         except:
             return
-        values = (self.sessionFiles['record_id'], ) + evaluations
+        values = (self.sessionFile['record_id'], ) + evaluations
         ### HACK
         print values
         ### self.writeToDatabase(values)

@@ -6,10 +6,8 @@ from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
-import module_locator
-import derived_logic as logic
-
-globals()['__file__'] = module_locator.module_path()
+from QALib.derived_images import *
+from QALib.derived_images import __slicer_module__
 
 ### TODO: Add logging
 # try:
@@ -51,13 +49,13 @@ class DerivedImageQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = logic.DerivedImageQALogic(self)
+            self.logic = DerivedImageQALogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.DerivedImageQALogic(self, test=False)
+            self.logic = DerivedImageQALogic(self, test=False)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
@@ -110,7 +108,7 @@ class DerivedImageQAWidget:
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile(os.path.join(__file__, fileName))
+        qfile = qt.QFile(os.path.join(__slicer_module__, fileName))
         qfile.open(qt.QFile.ReadOnly)
         try:
             return uiloader.load(qfile)
