@@ -107,7 +107,7 @@ class DWIrawQAWidget:
         return widget
 
     def _readCSS(self):
-        fullPath = os.path.join('/scratch1/welchdm/src/Slicer-extensions/SlicerQAExtension',
+        fullPath = os.path.join(__file__,
                                 'Resources/HTML',
                                 'dwi_raw.css')
         fID = open(fullPath)
@@ -119,7 +119,7 @@ class DWIrawQAWidget:
     def _readHTML(self, question):
         if self.css is None:
             self._readCSS()
-        fullPath = os.path.join('/scratch1/welchdm/src/Slicer-extensions/SlicerQAExtension',
+        fullPath = os.path.join(__file__,
                                 'Resources/HTML',
                                 question + '.html')
         fID = open(fullPath)
