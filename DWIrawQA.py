@@ -132,12 +132,9 @@ class DWIrawQAWidget:
             text = re.sub(r'CSS_FILE', self.css, text)
         return text
 
-    def connectSessionButtons(self):
-        """ Connect the session navigation buttons to their logic """
-        # TODO: Connect buttons
-        ### self.nextButton.connect('clicked()', self.logic.onNextButtonClicked)
-        ### self.previousButton.connect('clicked()', self.logic.onPreviousButtonClicked)
-        self.quitButton.connect('clicked()', self.exit)
+    # def connectSessionButtons(self):
+    #     """ Connect the session navigation buttons to their logic """
+    #     self.quitButton.connect('clicked()', self.exit)
 
     def enableRadios(self, question):
         """ Enable the radio buttons that match the given region name """
@@ -150,9 +147,20 @@ class DWIrawQAWidget:
 
     def resetRadioWidgets(self):
         """ Disable and reset all radio buttons in the widget """
+        print "Resetting radio buttons..."
         radios = self.imageQAWidget.findChildren("QRadioButton")
-        for radio in radios:
-            radio.setChecked(False)
+        for question in self.htmlFileName:
+            for radio in radios:
+                if radio.objectName.find(question) > -1 and radio.checked:
+                    # Fix for a bug in QT: see http://qtforum.org/article/19619/qradiobutton-setchecked-bug.html
+                    radio.setCheckable(False)
+                    radio.update()
+                    radio.setCheckable(True)
+                    # This SHOULD reset the autoexclusive radio buttons...
+                    if radio.isChecked():
+                        raise Exception("Radio is NOT reset!")
+                    else:
+                        print "Resetting radio {0}...".format(radio.objectName)
 
     def getRadioValues(self):
         values = ()
@@ -171,9 +179,9 @@ class DWIrawQAWidget:
         return values
 
     def resetWidget(self):
+        print "Resetting widgets..."
         self.resetRadioWidgets()
         self.gradientDisplayWidget.close()
-        ### TODO: self.resetDWIwidget()
 
     def getValues(self):
         values = self.getRadioValues()
@@ -220,7 +228,8 @@ class DWIrawQAWidget:
 
     def displayGradients(self, gradients):
         string = '\n'.join(item for item in gradients)
-        self.gradientDisplayWidget.setWindowTitle('Gradient directions for session %s' % self.logic.sessionFile['session'])
+        self.gradientDisplayWidget.setWindowTitle('Gradient directions for \n \
+                                                   file %s' % self.logic.sessionFile['file'])
         editor = self.gradientDisplayWidget.findChild('QTextEdit')
         editor.setText(string)
         editor.setReadOnly(True)

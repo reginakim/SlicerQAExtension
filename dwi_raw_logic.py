@@ -73,24 +73,11 @@ class DWIRawQALogic(object):
                                          self.user_id, self.batchSize)
 
     def selectRegion(self, buttonName):
-        """ Load the outline of the selected region into the scene
+        """ Load the raw DWI image
         """
         nodeName = self.constructLabelNodeName(buttonName)
-        labelNode = slicer.util.getNode(nodeName)
-        if labelNode.GetLabelMap():
-            ### HACK ###
-            # # # labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
-            # # # compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
-            # # # for compositeNode in compositeNodes.values():
-            # # #     compositeNode.SetLabelVolumeID(labelNode.GetID())
-            # # #     compositeNode.SetLabelOpacity(1.0)
-            # # # # Set the label outline to ON
-            # # # sliceNodes = slicer.util.getNodes('vtkMRMLSliceNode*')
-            # # # for sliceNode in sliceNodes.values():
-            #    sliceNode.UseLabelOutlineOn()
-            pass ### END HACK ###
-        else:
-             self.loadBackgroundNodeToMRMLScene(labelNode)
+        dwiNode = slicer.util.getNode(nodeName)
+        self.loadBackgroundNodeToMRMLScene(dwiNode)
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
@@ -113,15 +100,6 @@ class DWIRawQALogic(object):
             print "Error writing to database!"
             raise
 
-    ### def _getLabelFileNameFromRegion(self, regionName):
-    ###     try:
-    ###         region, side = regionName.split('_')
-    ###         fileName = '_'.join([side[0], region.capitalize(), 'seg.nii.gz'])
-    ###     except ValueError:
-    ###         region = regionName
-    ###         fileName = '_'.join([region, 'seg.nii.gz'])
-    ###     return fileName
-
     def onGetBatchFilesClicked(self):
         """ """
         self.count = 0
@@ -142,6 +120,7 @@ class DWIRawQALogic(object):
         self.sessionFile = {}
         baseDirectory = os.path.join(row[1], row[2], row[3], row[4], row[5])
         fileName = '%s_%s_%s.nrrd' % (row[3], row[4], row[6])
+        self.sessionFile['file'] = fileName
         self.sessionFile['filePath'] = os.path.join(baseDirectory, fileName)
         self.sessionFile['session'] = row[4]
         self.sessionFile['record_id'] = row[0]
