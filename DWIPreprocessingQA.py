@@ -6,10 +6,8 @@ from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
-import module_locator
-import dwi_logic
-
-globals()['__file__'] = module_locator.module_path()
+from QALib.dwi_preprocess import *
+from QALib.dwi_preprocess import __slicer_module__
 
 ### TODO: Add logging
 # try:
@@ -46,13 +44,13 @@ class DWIPreprocessingQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = dwi_logic.DWIPreprocessingQALogic(self)
+            self.logic = DWIPreprocessingQALogic(self)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = dwi_logic.DWIPreprocessingQALogic(self)
+            self.logic = DWIPreprocessingQALogic(self)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
@@ -89,7 +87,7 @@ class DWIPreprocessingQAWidget:
     def loadUIFile(self, fileName):
         """ Return the object defined in the Qt Designer file """
         uiloader = qt.QUiLoader()
-        qfile = qt.QFile(os.path.join(__file__, fileName))
+        qfile = qt.QFile(os.path.join(__slicer_module__, fileName))
         qfile.open(qt.QFile.ReadOnly)
         try:
             return uiloader.load(qfile)

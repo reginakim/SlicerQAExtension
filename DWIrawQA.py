@@ -10,8 +10,6 @@ from __main__ import vtk
 from QALib.dwi_raw import *
 from QALib.dwi_raw import __slicer_module__
 
-# globals()['__file__'] = module_locator.module_path()
-
 ### TODO: Add logging
 # try:
 #     import logging
@@ -45,13 +43,13 @@ class DWIrawQAWidget:
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
             self.layout = self.parent.layout()
-            self.logic = logic.DWIRawQALogic(self, False)
+            self.logic = DWIRawQALogic(self, False)
             self.setup()
             self.parent.show()
         else:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = logic.DWIRawQALogic(self, False)
+            self.logic = DWIRawQALogic(self, False)
 
     def setup(self):
         # Evaluation subsection

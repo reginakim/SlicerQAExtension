@@ -8,10 +8,7 @@ try:
 except:
     pass
 
-from dwi_helper import postgresDatabase
-import module_locator
-
-globals()['__file__'] = module_locator.module_path()
+from . import __slicer_module__, postgresDatabase
 
 try:
     import ConfigParser as cParser
@@ -58,10 +55,10 @@ class DWIPreprocessingQALogic(object):
         # self.createColorTable()
         config = cParser.SafeConfigParser()
         if self.testing:
-            configFile = os.path.join(__file__, 'test.cfg')
+            configFile = os.path.join(__slicer_module__, 'test.cfg')
             self.user_id = 'user1'
         else:
-            configFile = os.path.join(__file__, 'autoworkup.cfg')
+            configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
@@ -78,7 +75,7 @@ class DWIPreprocessingQALogic(object):
         """
         """
         self.colorTableNode = slicer.vtkMRMLColorTableNode()
-        self.colorTableNode.SetFileName(os.path.join(__file__, 'Resources', 'ColorFile', self.colorTable))
+        self.colorTableNode.SetFileName(os.path.join(__slicer_module__, 'Resources', 'ColorFile', self.colorTable))
         self.colorTableNode.SetName(self.colorTable[:-4])
         storage = self.colorTableNode.CreateDefaultStorageNode()
         slicer.mrmlScene.AddNode(storage)

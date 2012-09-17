@@ -1,9 +1,8 @@
 #!/usr/bin/env python
+import os
 import warnings
 
-import module_locator
-
-globals()['__file__'] = module_locator.module_path()
+from . import pg8000, sql
 
 class sqliteDatabase(object):
     """ Connect to the SQLite database and prevent multiple user collisions
@@ -161,18 +160,6 @@ class postgresDatabase(object):
         >>> db.host == 'my.test.host' and db.port == 15 and db.pguser == 'login' and db.pguser == db.database and db.password == 'pass' and db.login == 'myuser' and db.arraySize == 15
         True
         """
-        import os
-        try:
-            import pg8000
-        except ImportError:
-            ### Hack to import pg8000 locally
-            import os
-            import sys
-            pg8kDir = [os.path.join(__file__, 'Resources', 'Python', 'pg8000-1.08')]
-            newSysPath = pg8kDir + sys.path
-            sys.path = newSysPath
-            import pg8000
-        globals()['sql'] = pg8000.DBAPI
         sql.paramstyle = "qmark"
         self.rows = None
         self.connection = None
@@ -262,7 +249,8 @@ class postgresDatabase(object):
         """
         self.cursor.execute("SELECT * \
                             FROM derived_images \
-                            WHERE status = 'U'")
+                            WHERE status = 'U' \
+                            ORDER BY priority")
         self.rows = self.cursor.fetchmany()
         if not self.rows:
             raise pg8000.errors.DataError("No rows were status == 'U' were found!")
