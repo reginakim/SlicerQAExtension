@@ -122,7 +122,7 @@ class DWIRawQALogic(object):
         self.sessionFile['record_id'] = row[0]
         # Verify that the files exist
         if not os.path.exists(self.sessionFile['filePath']):
-            print "File not found: %s\nSkipping session..." % self.sessionFile[key]
+            print "File not found: %s\nSkipping session..." % self.sessionFile['filePath']
             # raise IOError("File not found!\nFile: %s" % self.sessionFile[key])
             self.database.unlockRecord('M', self.sessionFile['record_id'])
             self.onGetBatchFilesClicked()
