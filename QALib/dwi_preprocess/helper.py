@@ -191,8 +191,7 @@ class postgresDatabase(object):
                              airtissue_frontal, airtissue_occipital, airtissue_parietal, airtissue_temporal, \
                              crop_frontal, crop_occipital, crop_parietal, crop_temporal, \
                              dropout_frontal, dropout_occipital, dropout_parietal, dropout_temporal, \
-                             interleave_frontal, interleave_occipital, interleave_parietal, interleave_temporal, \
-                             missingData, dwi_image, notes, reviewer_id\
+                             is_interlaced, missingData, dwi_image, notes, reviewer_id\
                             ) VALUES (%s)" % valueString
             self.cursor.execute(sqlCommand, values + (self.reviewer_id,))
             self.connection.commit()
