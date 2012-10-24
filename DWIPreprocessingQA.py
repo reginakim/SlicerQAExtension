@@ -31,8 +31,8 @@ class DWIPreprocessingQA:
 class DWIPreprocessingQAWidget:
     def __init__(self, parent=None):
         self.images = ('DWI',)
-        self.artifacts = ('airTissue', 'cropping', 'dropOut', 'interleave', 'missingData')
-        self.lobes = ('frontal', 'occipital', 'parietal', 'temporal')
+        self.artifacts = ('susceptibility', 'cropping', 'dropOut', 'interlace', 'missingData', 'miscComments')
+        self.lobes = ('frontal', 'occipital', 'parietal', 'temporal', 'cerebellum')
         self.currentSession = None
         self.imageQAWidget = None
         self.navigationWidget = None
@@ -176,21 +176,30 @@ class DWIPreprocessingQAWidget:
         values = ()
         needsFollowUp = False
         for artifact in self.artifacts:
-            if artifact == 'missingData':
-                objectName = 'missingLineEdit'
+            if artifact in ['missingData', 'miscComment']:
+                objectName = artifact + 'LineEdit'
                 lineEdit = self.dwiArtifactWidget.findChild('QLineEdit', objectName)
                 notes = lineEdit.text
                 if notes is None:
                     notes = 'Null'
                 values = values + (lineEdit.text,)
-                break
-            for lobe in self.lobes:
-                objectName = artifact + '_' + lobe
+            elif artifact in ['interlace']:
+                objectName = artifact + '_true'
                 checkBox = self.dwiArtifactWidget.findChild('QCheckBox', objectName)
                 if checkBox.checked:
                     values = values + (True,)
                 else:
                     values = values + (False,)
+            else:
+                for lobe in self.lobes:
+                    objectName = artifact + '_' + lobe
+                    checkBox = self.dwiArtifactWidget.findChild('QCheckBox', objectName)
+                    if checkBox is None:
+                        values = values # + ('NULL',)
+                    elif checkBox.checked:
+                        values = values + (True,)
+                    else:
+                        values = values + (False,)
         return values
 
     def resetWidget(self):
@@ -222,7 +231,7 @@ class DWIPreprocessingQAWidget:
 
     def checkValues(self):
         values = self.getValues()
-        if len(values) >= len(self.images) + ((len(self.artifacts) - 1) * len(self.lobes)):
+        if len(values) >= len(self.images) + ((len(self.artifacts) - 2) * len(self.lobes)) + 1:
             print values ### HACK
             self.logic.writeToDatabase(values)
             self.resetWidget()

@@ -33,7 +33,7 @@
     <number>3</number>
    </property>
    <item>
-    <widget class="QLabel" name="airTissue">
+    <widget class="QLabel" name="susceptibility">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
        <horstretch>0</horstretch>
@@ -48,7 +48,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Air &amp; Tissue</string>
+      <string>Susceptibility</string>
      </property>
      <property name="textInteractionFlags">
       <set>Qt::NoTextInteraction</set>
@@ -56,7 +56,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="airTissueFrame">
+    <widget class="QFrame" name="susceptibilityFrame">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -68,30 +68,37 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="airTissue_temporal">
+       <widget class="QCheckBox" name="susceptibility_temporal">
         <property name="text">
          <string>Temporal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="airTissue_frontal">
+       <widget class="QCheckBox" name="susceptibility_frontal">
         <property name="text">
          <string>Frontal</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="airTissue_occipital">
+       <widget class="QCheckBox" name="susceptibility_occipital">
         <property name="text">
          <string>Occipital</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="airTissue_parietal">
+       <widget class="QCheckBox" name="susceptibility_parietal">
         <property name="text">
          <string>Parietal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="susceptibility_cerebellum">
+        <property name="text">
+         <string>Cerebellum</string>
         </property>
        </widget>
       </item>
@@ -174,6 +181,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="cropping_cerebellum">
+        <property name="text">
+         <string>Cerebellum</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -209,7 +223,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Dropout</string>
+      <string>Dropout/Vibration</string>
      </property>
     </widget>
    </item>
@@ -253,6 +267,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="dropOut_cerebellum">
+        <property name="text">
+         <string>Cerebellum</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -273,7 +294,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="interleave">
+    <widget class="QLabel" name="interlace">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
        <horstretch>0</horstretch>
@@ -288,12 +309,12 @@
       </font>
      </property>
      <property name="text">
-      <string>Interleave</string>
+      <string>Check here if the image is interlaced:</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="interleaveFrame">
+    <widget class="QFrame" name="interlaceFrame">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -305,30 +326,9 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="interleave_temporal">
+       <widget class="QCheckBox" name="interlace_true">
         <property name="text">
-         <string>Temporal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="interleave_frontal">
-        <property name="text">
-         <string>Frontal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="interleave_occipital">
-        <property name="text">
-         <string>Occipital</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="interleave_parietal">
-        <property name="text">
-         <string>Parietal</string>
+         <string>Interlace</string>
         </property>
        </widget>
       </item>
@@ -374,12 +374,22 @@
    <item>
     <widget class="QLabel" name="missingUserInfo">
      <property name="text">
-      <string>Enter a comma-seperated list of values:</string>
+      <string>Enter a comma-seperated list of DWI Components:</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="missingLineEdit"/>
+    <widget class="QLineEdit" name="missingDataLineEdit"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="miscComments">
+     <property name="text">
+      <string>Enter a comment: (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="miscCommentLineEdit"/>
    </item>
   </layout>
  </widget>
