@@ -32,7 +32,7 @@ class DWIPreprocessingQAWidget:
     def __init__(self, parent=None):
         self.images = ('DWI',)
         self.artifacts = ('susceptibility', 'cropping', 'dropOut', 'interlace', 'missingData', 'miscComments')
-        self.lobes = ('frontal', 'occipital', 'parietal', 'temporal', 'cerebellum')
+        self.lobes = ('frontal', 'temporal', 'parietal', 'occipital', 'cerebellum')
         self.currentSession = None
         self.imageQAWidget = None
         self.navigationWidget = None
