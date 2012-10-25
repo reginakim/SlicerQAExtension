@@ -68,13 +68,6 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="susceptibility_temporal">
-        <property name="text">
-         <string>Temporal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QCheckBox" name="susceptibility_frontal">
         <property name="text">
          <string>Frontal</string>
@@ -82,9 +75,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="susceptibility_occipital">
+       <widget class="QCheckBox" name="susceptibility_temporal">
         <property name="text">
-         <string>Occipital</string>
+         <string>Temporal</string>
         </property>
        </widget>
       </item>
@@ -92,6 +85,13 @@
        <widget class="QCheckBox" name="susceptibility_parietal">
         <property name="text">
          <string>Parietal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="susceptibility_occipital">
+        <property name="text">
+         <string>Occipital</string>
         </property>
        </widget>
       </item>
@@ -154,13 +154,6 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="cropping_temporal">
-        <property name="text">
-         <string>Temporal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QCheckBox" name="cropping_frontal">
         <property name="text">
          <string>Frontal</string>
@@ -168,9 +161,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="cropping_occipital">
+       <widget class="QCheckBox" name="cropping_temporal">
         <property name="text">
-         <string>Occipital</string>
+         <string>Temporal</string>
         </property>
        </widget>
       </item>
@@ -178,6 +171,13 @@
        <widget class="QCheckBox" name="cropping_parietal">
         <property name="text">
          <string>Parietal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cropping_occipital">
+        <property name="text">
+         <string>Occipital</string>
         </property>
        </widget>
       </item>
@@ -240,13 +240,6 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="dropOut_temporal">
-        <property name="text">
-         <string>Temporal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QCheckBox" name="dropOut_frontal">
         <property name="text">
          <string>Frontal</string>
@@ -254,9 +247,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="dropOut_occipital">
+       <widget class="QCheckBox" name="dropOut_temporal">
         <property name="text">
-         <string>Occipital</string>
+         <string>Temporal</string>
         </property>
        </widget>
       </item>
@@ -264,6 +257,13 @@
        <widget class="QCheckBox" name="dropOut_parietal">
         <property name="text">
          <string>Parietal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="dropOut_occipital">
+        <property name="text">
+         <string>Occipital</string>
         </property>
        </widget>
       </item>
