@@ -127,7 +127,8 @@ class DWIPreprocessingQALogic(object):
             self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
-            print "Error writing to database!"
+            print "Error writing to database! "
+            print values
             raise
 
     def _getLabelFileNameFromRegion(self, regionName):
@@ -142,10 +143,7 @@ class DWIPreprocessingQALogic(object):
     def onGetBatchFilesClicked(self):
         """ """
         self.count = 0
-        ### HACK
-        ### self.batchRows = [(0, 'src', 'Slicer-extensions', 'SlicerQAExtension', 'DWI', '/scratch/welchdm')]
         self.batchRows = self.database.lockAndReadRecords()
-        ### END ###
         self.maxCount = len(self.batchRows)
         self.constructFilePaths()
         self.setCurrentSession()
@@ -175,7 +173,6 @@ class DWIPreprocessingQALogic(object):
         for key in self.images:
             if not os.path.exists(self.sessionFiles[key]):
                 print "File not found: %s\nSkipping session..." % self.sessionFiles[key]
-                # raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
                 self.database.unlockRecord('M', self.sessionFiles['record_id'])
                 self.onGetBatchFilesClicked()
                 # TODO: Generalize for a batch size > 1
@@ -192,10 +189,7 @@ class DWIPreprocessingQALogic(object):
         dwiNodeName = '%s_dwi' % self.currentSession
         dwiVolumeNode = slicer.util.getNode(dwiNodeName)
         if dwiVolumeNode is None:
-            ### HACK
             volumeLogic.AddArchetypeVolume(self.sessionFiles['DWI'], dwiNodeName, 0)
-            # ('/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension/DWI/dwi.nhdr', dwiNodeName, 0)
-            ### END ###
             if slicer.util.getNode(dwiNodeName) is None:
                 raise IOError("Could not load session file for DWI! File: %s" % self.sessionFiles['DWI'])
             dwiVolumeNode = slicer.util.getNode(dwiNodeName)
@@ -215,61 +209,6 @@ class DWIPreprocessingQALogic(object):
                 raise IOError("Could not find nodes for session %s" % self.currentSession)
         applicationLogic = slicer.app.applicationLogic()
         applicationLogic.FitSliceToAll()
-
-    def getEvaluationValues(self):
-        """ Get the evaluation values from the widget """
-        values = ()
-        for region in self.images:
-            goodButton, badButton = self.widget._findRadioButtons(region)
-            if goodButton.isChecked():
-                values = values + (self.qaValueMap['good'],)
-            elif badButton.isChecked():
-                values = values + (self.qaValueMap['bad'],)
-            else:
-                Exception('Session cannot be changed until all regions are evaluated.  Missing region: %s' % region)
-            values = self.widget.getCheckboxValues() + values
-        return values
-
-    def onNextButtonClicked(self):
-        """ Capture the evaluation values, write them to the database, reset the widgets, then load the next dataset """
-        try:
-            evaluations = self.getEvaluationValues()
-        except:
-            return
-        # columns = ('record_id',)
-        # for artifact in + self.widget.artifacts:
-        #     for lobe in self.widget.lobes:
-        #         columns = columns + ('%s_%s' % (artifact, lobe),)
-        values = (self.sessionFiles['record_id'], ) + evaluations
-        ### HACK
-        print values
-        ###self.writeToDatabase(values)
-        ### END ###
-        count = self.count + 1
-        if count <= self.maxCount - 1:
-            self.count = count
-        else:
-            self.count = 0
-        self.loadNewSession()
-        self.widget.resetWidget()
-
-    def onPreviousButtonClicked(self):
-        try:
-            evaluations = self.getEvaluationValues()
-        except:
-            return
-        values = (self.sessionFiles['record_id'], ) + evaluations
-        ### HACK
-        print values
-        ### self.writeToDatabase(values)
-        ### END ###
-        count = self.count - 1
-        if count >= 0:
-            self.count = count
-        else:
-            self.count = self.maxCount - 1
-        self.loadNewSession()
-        self.widget.resetWidget()
 
     def loadNewSession(self):
         self.constructFilePaths()

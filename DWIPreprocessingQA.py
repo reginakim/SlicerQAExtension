@@ -31,8 +31,9 @@ class DWIPreprocessingQA:
 class DWIPreprocessingQAWidget:
     def __init__(self, parent=None):
         self.images = ('DWI',)
-        self.artifacts = ('susceptibility', 'cropping', 'dropOut', 'interlace', 'missingData', 'miscComments')
+        self.artifacts = ('susceptibility', 'cropping', 'dropOut', 'interlace')
         self.lobes = ('frontal', 'temporal', 'parietal', 'occipital', 'cerebellum')
+        self.textAreas = ('missingData', 'miscComments')
         self.currentSession = None
         self.imageQAWidget = None
         self.navigationWidget = None
@@ -149,6 +150,8 @@ class DWIPreprocessingQAWidget:
         values = ()
         needsFollowUp = False
         radios = self.imageQAWidget.findChildren("QRadioButton")
+        if self.images is None: # Exiting module HACK
+            return ((), "NULL")
         for image in self.images:
             for radio in radios:
                 if radio.objectName.find(image) > -1 and radio.checked:
@@ -160,30 +163,23 @@ class DWIPreprocessingQAWidget:
                         values = values + (-1,)
                         needsFollowUp = True
                     else:
-                        values = values + ("NULL",)
-                        print "Warning: No value for %s" % image
+                        raise Exception("No value for radio button %s" % image)
+                else:
+                    if radio.objectName.find(image) == -1:
+                        raise Exception("No radio button for image %s" % image)
+                    else:
+                        pass
         if needsFollowUp:
             self.followUpDialog.exec_()
             if self.followUpDialog.result() and not self.notes is None:
-                values = values + (self.notes,)
-            else:
-                values = values + ("NULL",)
+                return (values, self.notes)
         else:
-            values = values + ("NULL",)
-        return values
+            return (values, "NULL")
 
     def getCheckboxValues(self):
         values = ()
-        needsFollowUp = False
         for artifact in self.artifacts:
-            if artifact in ['missingData', 'miscComment']:
-                objectName = artifact + 'LineEdit'
-                lineEdit = self.dwiArtifactWidget.findChild('QLineEdit', objectName)
-                notes = lineEdit.text
-                if notes is None:
-                    notes = 'Null'
-                values = values + (lineEdit.text,)
-            elif artifact in ['interlace']:
+            if artifact in ['interlace']:
                 objectName = artifact + '_true'
                 checkBox = self.dwiArtifactWidget.findChild('QCheckBox', objectName)
                 if checkBox.checked:
@@ -195,11 +191,22 @@ class DWIPreprocessingQAWidget:
                     objectName = artifact + '_' + lobe
                     checkBox = self.dwiArtifactWidget.findChild('QCheckBox', objectName)
                     if checkBox is None:
-                        values = values # + ('NULL',)
+                        raise Exception("Cannot find value for checkbox %s!" % objectName)
                     elif checkBox.checked:
                         values = values + (True,)
                     else:
                         values = values + (False,)
+        return values
+
+    def getTextValues(self):
+        values = ()
+        for textArea in self.textAreas:
+            objectName = textArea + 'LineEdit'
+            lineEdit = self.dwiArtifactWidget.findChild('QLineEdit', objectName)
+            notes = lineEdit.text
+            if notes is None:
+                notes = 'Null'
+            values = values + (lineEdit.text,)
         return values
 
     def resetWidget(self):
@@ -219,39 +226,37 @@ class DWIPreprocessingQAWidget:
         # TODO:
         pass
 
-
     def getValues(self):
-        radioValues = self.getRadioValues()
-        if 0 in radioValues or -1 in radioValues:
-            print 'We need DWI evaluation input!'
-        else:
-            print 'We do not need DWI review'
-        values = self.getCheckboxValues() + radioValues
+        (values, followUpText) = self.getRadioValues()
+        # if 0 in values or -1 in values:
+        #     print 'We need followup DWI evaluation!'
+        # else:
+        #     print 'We do not need supervisor review'
+        values = values + self.getCheckboxValues()
+        values = values + self.getTextValues() + (followUpText,)
         return values
 
     def checkValues(self):
         values = self.getValues()
-        if len(values) >= len(self.images) + ((len(self.artifacts) - 2) * len(self.lobes)) + 1:
-            print values ### HACK
-            self.logic.writeToDatabase(values)
-            self.resetWidget()
+        checkboxCount = (((len(self.artifacts) - 1) * len(self.lobes)) + 1) # + 1 for 'is_interlaced
+        textBoxCount = len(self.textAreas) + 1 # + 1 for followUp
+        if len(values) >= (len(self.images) + checkboxCount + textBoxCount):
             return (0, values)
         elif len(values) == 0:
-            print "No values at all!"
             return (-1, values)
         else:
-            # TODO: Handle this case intelligently
-            print "Not enough values for the required columns!"
-            print values
-        return (-2, values)
+            # TODO: Handle this error intelligently
+            return (-2, values)
 
     def onGetBatchFilesClicked(self):
         (code, values) = self.checkValues()
         if code == 0:
             self.logic.writeToDatabase(values)
+            self.resetWidget()
             self.logic.onGetBatchFilesClicked()
         else:
-            pass
+            print values
+            raise Exception("Not enough values for the database: Error code %d" % code)
 
     def exit(self):
         """ When Slicer exits, prompt user if they want to write the last evaluation """

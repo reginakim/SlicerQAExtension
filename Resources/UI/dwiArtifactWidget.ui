@@ -389,7 +389,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="miscCommentLineEdit"/>
+    <widget class="QLineEdit" name="miscCommentsLineEdit"/>
    </item>
   </layout>
  </widget>

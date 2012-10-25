@@ -188,11 +188,29 @@ class postgresDatabase(object):
             valueString = ("?, " * (len(values) + 1))[:-2]
             sqlCommand = "INSERT INTO dwi_reviews \
                             (record_id, \
-                             airtissue_frontal, airtissue_occipital, airtissue_parietal, airtissue_temporal, \
-                             crop_frontal, crop_occipital, crop_parietal, crop_temporal, \
-                             dropout_frontal, dropout_occipital, dropout_parietal, dropout_temporal, \
-                             is_interlaced, missingData, dwi_image, notes, reviewer_id\
+                             dwi_image, \
+                             susceptibility_frontal, \
+                             susceptibility_temporal, \
+                             susceptibility_parietal, \
+                             susceptibility_occipital, \
+                             susceptibility_cerebellum, \
+                             crop_frontal, \
+                             crop_temporal, \
+                             crop_parietal, \
+                             crop_occipital, \
+                             crop_cerebellum, \
+                             dropout_frontal, \
+                             dropout_temporal, \
+                             dropout_parietal, \
+                             dropout_occipital, \
+                             dropout_cerebellum, \
+                             is_interlaced, \
+                             missingdata, \
+                             misccomments, \
+                             followupnotes, \
+                             reviewer_id \
                             ) VALUES (%s)" % valueString
+                            # Nota bene: reviewer_id MUST be last in string
             self.cursor.execute(sqlCommand, values + (self.reviewer_id,))
             self.connection.commit()
         except:
