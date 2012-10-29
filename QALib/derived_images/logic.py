@@ -156,7 +156,7 @@ class DerivedImageQALogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        if re.search('/hjonhson/HDNI/Experiments', row[5]):
+        if re.search('TrackOn', row[5]):
             tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC')
         else:
             tissueDirectory = os.path.join(baseDirectory, 'TissueClassify')
