@@ -6,6 +6,7 @@ from __main__ import slicer
 from __main__ import vtk
 
 from . import __slicer_module__, postgresDatabase
+import warnings.warn
 
 try:
     import ConfigParser as cParser
@@ -137,10 +138,15 @@ class DerivedImageQALogic(object):
         """ """
         self.count = 0
         self.batchRows = self.database.lockAndReadRecords()
-        self.maxCount = len(self.batchRows)
-        self.constructFilePaths()
-        self.setCurrentSession()
-        self.loadData()
+        ### HACK: Run HDNI evaluations only!
+        if self.batchRows[5] == '/paulsen/Experiments':
+            self.database.unlockRecord()
+        else:
+            self.maxCount = len(self.batchRows)
+            self.constructFilePaths()
+            self.setCurrentSession()
+            self.loadData()
+            ## END HACK: Run HDNI evaluations only!
 
     def setCurrentSession(self):
         self.currentSession = self.sessionFiles['session']
@@ -160,7 +166,11 @@ class DerivedImageQALogic(object):
                 sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
             else:
                 fileName = self._getLabelFileNameFromRegion(regionName)
-                sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+                sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName)
+                if not os.path.exist(sessionFiles[regionName]):
+                    sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+                    if not os.path.exist(sessionFiles[regionName]):
+                        warn("No BRAINSCut output files were found @ %s  Skipping..." sessionFiles[regionName])
         self.sessionFiles = sessionFiles
         # Verify that the files exist
         for key in self.images + self.regions:
