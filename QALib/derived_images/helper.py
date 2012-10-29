@@ -54,9 +54,11 @@ class sqliteDatabase(object):
         self.cursor.arraysize = self.arraySize
 
     def getBatch(self):
+        ### HACK: Run HDNI evaluations only!
         self.cursor.execute("SELECT * \
                             FROM derived_images \
-                            WHERE status = 'U'")
+                            WHERE status = 'U' AND location LIKE '%HDNI%'")
+        ### END HACK: Run HDNI evaluations only!
         self.rows = self.cursor.fetchmany()
         if not self.rows:
             raise warnings.warn("No rows were status == 'U' were found!")

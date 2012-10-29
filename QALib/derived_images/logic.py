@@ -1,4 +1,7 @@
+import re
 import os
+import warnings
+warn = warnings.warn
 
 from __main__ import ctk
 from __main__ import qt
@@ -6,7 +9,6 @@ from __main__ import slicer
 from __main__ import vtk
 
 from . import __slicer_module__, postgresDatabase
-import warnings.warn
 
 try:
     import ConfigParser as cParser
@@ -138,15 +140,10 @@ class DerivedImageQALogic(object):
         """ """
         self.count = 0
         self.batchRows = self.database.lockAndReadRecords()
-        ### HACK: Run HDNI evaluations only!
-        if self.batchRows[5] == '/paulsen/Experiments':
-            self.database.unlockRecord()
-        else:
-            self.maxCount = len(self.batchRows)
-            self.constructFilePaths()
-            self.setCurrentSession()
-            self.loadData()
-            ## END HACK: Run HDNI evaluations only!
+        self.maxCount = len(self.batchRows)
+        self.constructFilePaths()
+        self.setCurrentSession()
+        self.loadData()
 
     def setCurrentSession(self):
         self.currentSession = self.sessionFiles['session']
@@ -159,18 +156,26 @@ class DerivedImageQALogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        sessionFiles['t1_average'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
-        sessionFiles['t2_average'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+        if re.search('/hjonhson/HDNI/Experiments', row[5]):
+            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC')
+        else:
+            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify')
+        sessionFiles['t1_average'] = os.path.join(tissueDirectory, 't1_average_BRAINSABC.nii.gz')
+        sessionFiles['t2_average'] = os.path.join(tissueDirectory, 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
             if regionName == 'labels_tissue':
-                sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
+                sessionFiles['labels_tissue'] = os.path.join(tissueDirectory, 'brain_label_seg.nii.gz')
             else:
                 fileName = self._getLabelFileNameFromRegion(regionName)
                 sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName)
-                if not os.path.exist(sessionFiles[regionName]):
-                    sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
-                    if not os.path.exist(sessionFiles[regionName]):
-                        warn("No BRAINSCut output files were found @ %s  Skipping..." sessionFiles[regionName])
+                if not os.path.exists(sessionFiles[regionName]):
+                    sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName.lower())
+                    if not os.path.exists(sessionFiles[regionName]):
+                        sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+                        if not os.path.exists(sessionFiles[regionName]):
+                            sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName.lower())
+                            if not os.path.exists(sessionFiles[regionName]):
+                                warn("No output files were found at %s in /Segmentations or /BRAINSCut for region %s. Skipping..." %  (baseDirectory, regionName))
         self.sessionFiles = sessionFiles
         # Verify that the files exist
         for key in self.images + self.regions:
