@@ -1,4 +1,5 @@
 import os
+from warnings import warn
 
 from __main__ import ctk
 from __main__ import qt
@@ -83,6 +84,8 @@ class DerivedImageQALogic(object):
         """ Load the outline of the selected region into the scene
         """
         nodeName = self.constructLabelNodeName(buttonName)
+        if nodeName == '':
+            return -1
         labelNode = slicer.util.getNode(nodeName)
         if labelNode.GetLabelMap():
             labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
@@ -99,8 +102,10 @@ class DerivedImageQALogic(object):
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
-        nodeName = '_'.join([self.currentSession, buttonName])
-        return nodeName
+	if not self.currentSession is None:
+            nodeName = '_'.join([self.currentSession, buttonName])
+            return nodeName
+        return ''      
 
     def onCancelButtonClicked(self):
         # TODO: Populate this function
@@ -153,14 +158,25 @@ class DerivedImageQALogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        sessionFiles['t1_average'] = os.path.join(baseDirectory, 'TissueClassify', 't1_average_BRAINSABC.nii.gz')
-        sessionFiles['t2_average'] = os.path.join(baseDirectory, 'TissueClassify', 't2_average_BRAINSABC.nii.gz')
+        tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC') # New directory structure 2012-11-26
+        if not os.path.exists(tissueDirectory):
+            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify') # Old directory structure (pre- 2012-11-26)
+        sessionFiles['t1_average'] = os.path.join(tissueDirectory, 't1_average_BRAINSABC.nii.gz')
+        sessionFiles['t2_average'] = os.path.join(tissueDirectory, 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
             if regionName == 'labels_tissue':
-                sessionFiles['labels_tissue'] = os.path.join(baseDirectory, 'TissueClassify', 'brain_label_seg.nii.gz')
+                sessionFiles['labels_tissue'] = os.path.join(tissueDirectory, 'brain_label_seg.nii.gz')
             else:
                 fileName = self._getLabelFileNameFromRegion(regionName)
-                sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+                sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName)
+                if not os.path.exists(sessionFiles[regionName]):
+                    sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName.lower())
+                    if not os.path.exists(sessionFiles[regionName]):
+                        sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
+                        if not os.path.exists(sessionFiles[regionName]):
+                            sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName.lower())
+                            if not os.path.exists(sessionFiles[regionName]):
+                                warn("No output files were found at %s in /Segmentations or /BRAINSCut for region %s. Skipping..." %  (baseDirectory, regionName))
         self.sessionFiles = sessionFiles
         # Verify that the files exist
         for key in self.images + self.regions:
