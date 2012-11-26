@@ -1,0 +1,116 @@
+Doctests for ./QALib/derived_images/helper.py
+=============================================
+
+Using ``postgresDatabase object``
+---------------------------------
+    >>> import os
+    >>> from helper import *
+
+Test default parameters:
+
+    >>> db = postgresDatabase()
+    >>> assert db != None
+    >>> assert db.host == 'localhost'
+    >>> assert db.port == 5432
+    >>> assert db.pguser == 'postgres'
+    >>> assert db.pguser == db.database
+    >>> assert db.pguser == db.password
+    >>> assert db.login == os.environ['USER']
+    >>> assert db.arraySize == 1
+
+Test positional args:
+
+    >>> db = postgresDatabase('my.test.host', 0, 'myuser', None, 'pass', 'login', 15)
+    >>> assert db != None
+    >>> assert db.host == 'my.test.host'
+    >>> assert db.port == 0
+    >>> assert db.pguser == 'myuser'
+    >>> assert db.pguser == db.database
+    >>> assert db.password == 'pass'
+    >>> assert db.login == 'login'
+    >>> assert db.arraySize == 15
+
+Test a mix of args and defaults:
+
+    >>> db = postgresDatabase('my.test.host', 'myuser', port=15, database='postgres', arraySize=15, password='pass', pguser='login')
+    >>> assert db != None
+    >>> assert db.host == 'my.test.host'
+    >>> assert db.port == 15
+    >>> assert db.pguser == 'login'
+    >>> assert db.database == 'postgres'
+    >>> assert db.password == 'pass'
+    >>> assert db.login == 'myuser'
+    >>> assert db.arraySize == 15
+
+Test keyword args
+
+    >>> db = postgresDatabase(host='my.test.host', arraySize=15, login='myuser', password='pass', database=None, pguser='login', port=15)
+    >>> assert db != None
+    >>> assert db.host == 'my.test.host'
+    >>> assert db.port == 15
+    >>> assert db.pguser == 'login'
+    >>> assert db.pguser == db.database
+    >>> assert db.password == 'pass'
+    >>> assert db.login == 'myuser'
+    >>> assert db.arraySize == 15
+
+Test ``openDatabase()``
+-----------------------
+    >>> import pg8000 as sql
+    >>> db = postgresDatabase()
+    >>> db.openDatabase()
+    >>> isinstance(db.connection, sql.DBAPI.ConnectionWrapper)
+    True
+    >>> isinstance(db.cursor, sql.DBAPI.CursorWrapper)
+    True
+
+Test ``closeDatabase()``
+------------------------
+ TODO
+
+Test ``getReviewerID()``
+------------------------
+Test existing reviewer
+
+    >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+    >>> db.getReviewerID(); assert db.reviewer_id == 1
+
+Test non-existant user
+
+    >>> db = postgresDatabase(host='psych-db.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user0')
+    >>> db.getReviewerID();
+    Traceback (most recent call last):
+    ...
+    DataError: Reviewer user0 is not registered in the database test!
+
+Test ``getRecords()``
+---------------------
+
+     >>> db = postgresDatabase(host='opteron.psychiatry.uiowa.edu', pguser='tester', database='test', password='test1', login='user1')
+
+Test without open database
+
+     >>> db.getRecords(table='derived_images')
+     Traceback (most recent call last):
+     ...
+     AttributeError: 'NoneType' object has no attribute 'execute'
+
+Test with opened database
+
+     >>> db.openDatabase(); db.getRecords(table='derived_images', status='U'); db.closeDatabase()
+     >>> assert len(db.rows) == 1
+
+Test non-existant table
+
+     >>> db.openDatabase(); db.getRecords(table='derive_image');
+     Traceback (most recent call last):
+     ...
+     AssertionError: "The database table is not specified: value is "derive_image""
+     >>> db.closeDatabase()
+
+Test with args
+
+     >>> db.openDatabase(); db.getRecords(table='derived_images', status='U'); db.closeDatabase()
+     >>> assert db.rows is None
+
+

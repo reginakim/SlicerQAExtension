@@ -6,7 +6,7 @@ from __main__ import qt
 from __main__ import slicer
 from __main__ import vtk
 
-from QALib.derived_images import *
+from QALib.derived_images.logic import *
 from QALib.derived_images import __slicer_module__
 
 ### TODO: Add logging
