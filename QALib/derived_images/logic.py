@@ -156,10 +156,9 @@ class DerivedImageQALogic(object):
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        if re.search('TrackOn', row[5]):
-            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC')
-        else:
-            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify')
+        tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC') # New directory structure 2012-11-26
+        if not os.exist.(tissueDirectory):
+            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify') # Old directory structure (pre- 2012-11-26)
         sessionFiles['t1_average'] = os.path.join(tissueDirectory, 't1_average_BRAINSABC.nii.gz')
         sessionFiles['t2_average'] = os.path.join(tissueDirectory, 't2_average_BRAINSABC.nii.gz')
         for regionName in self.regions:
