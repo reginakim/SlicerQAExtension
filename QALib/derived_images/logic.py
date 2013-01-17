@@ -258,7 +258,7 @@ class DerivedImageQALogic(object):
         t1NodeName = '%s_t1_average' % self.currentSession
         t1VolumeNode = slicer.util.getNode(t1NodeName)
         if t1VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0)
+            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0, None)
             if slicer.util.getNode(t1NodeName) is None:
                 raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['t1_average'])
             t1VolumeNode = slicer.util.getNode(t1NodeName)
@@ -267,7 +267,7 @@ class DerivedImageQALogic(object):
         t2NodeName = '%s_t2_average' % self.currentSession
         t2VolumeNode = slicer.util.getNode(t2NodeName)
         if t2VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0)
+            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0, None)
             if slicer.util.getNode(t2NodeName) is None:
                 raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['t2_average'])
             t2VolumeNode = slicer.util.getNode(t2NodeName)
@@ -277,7 +277,7 @@ class DerivedImageQALogic(object):
             regionNodeName = '%s_%s' % (self.currentSession, region)
             regionNode = slicer.util.getNode(regionNodeName)
             if regionNode is None:
-                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1, None)
                 if slicer.util.getNode(regionNodeName) is None:
                     raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
                 regionNode = slicer.util.getNode(regionNodeName)
