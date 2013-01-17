@@ -115,7 +115,7 @@ class DerivedImageQALogic(object):
 	if not self.currentSession is None:
             nodeName = '_'.join([self.currentSession, buttonName])
             return nodeName
-        return ''      
+        return ''
 
     def onCancelButtonClicked(self):
         # TODO: Populate this function
