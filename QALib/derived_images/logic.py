@@ -1,20 +1,17 @@
-import os
-from warnings import warn
-
-from __main__ import ctk
-from __main__ import qt
-from __main__ import slicer
-from __main__ import vtk
-
-from . import __slicer_module__, postgresDatabase
-
 try:
+    import os
     import ConfigParser as cParser
+    from . import __slicer_module__, postgresDatabase
+
+    from __main__ import ctk
+    from __main__ import qt
+    from __main__ import slicer
+    from __main__ import vtk
     # import logging
     # import logging.handlers
 except ImportError:
     print "External modules not found!"
-    raise ImportError
+    # raise ImportError
 
 
 class DerivedImageQALogic(object):
@@ -28,6 +25,7 @@ class DerivedImageQALogic(object):
         self.colorTableNode = None
         self.user_id = None
         self.database = None
+        self.config = None
         self.batchSize = 1
         self.batchRows = None
         self.count = 0 # Starting value
@@ -36,20 +34,27 @@ class DerivedImageQALogic(object):
         self.currentValues = (None,)*len(self.images + self.regions)
         self.sessionFiles = {}
         self.testing = test
+        if self.testing:
+            print "Testing logic is ON"
         self.setup()
 
     def setup(self):
-        self.createColorTable()
+        # self.createColorTable()
         config = cParser.SafeConfigParser()
+        self.config = cParser.SafeConfigParser()
+        logicConfig = os.path.join(__slicer_module__, 'derived_images.cfg')
         if self.testing:
-            configFile = os.path.join(__slicer_module__, 'test.cfg')
+            ### HACK
+            databaseConfig = os.path.join(__slicer_module__, 'database.cfg.EXAMPLE')
             self.user_id = 'user1'
+            ### END HACK
         else:
-            configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
+            databaseConfig = os.path.join(__slicer_module__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
-        if not os.path.exists(configFile):
-            raise IOError("File {0} not found!".format(configFile))
-        config.read(configFile)
+        for configFile in [databaseConfig, logicConfig]:
+            if not os.path.exists(configFile):
+                raise IOError("File {0} not found!".format(configFile))
+        config.read(databaseConfig)
         host = config.get('Postgres', 'Host')
         port = config.getint('Postgres', 'Port')
         database = config.get('Postgres', 'Database')
@@ -57,8 +62,13 @@ class DerivedImageQALogic(object):
         password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
         #        import hashlib as md5
         #        md5Password = md5.new(password)
-        self.database = postgresDatabase(host, port, db_user, database, password,
-                                         self.user_id, self.batchSize)
+        ### HACK
+        if not self.testing:
+            self.database = postgresDatabase(host, port, db_user, database, password,
+                                             self.user_id, self.batchSize)
+        ### END HACK
+        self.config.read(logicConfig)
+
 
     def createColorTable(self):
         """
@@ -152,42 +162,91 @@ class DerivedImageQALogic(object):
         self.widget.currentSession = self.currentSession
 
     def constructFilePaths(self):
+        """
+        >>> import DerivedImagesQA as diqa
+        External modules not found!
+        /Volumes/scratch/welchdm/src/Slicer-extensions/SlicerQAExtension
+        External modules not found!
+        >>> test = diqa.DerivedImageQAWidget(None, True)
+        Testing logic is ON
+        >>> test.logic.count = 0 ### HACK
+        >>> test.logic.batchRows = [['rid','exp', 'site', 'sbj', 'ses', 'loc']] ### HACK
+        >>> test.logic.constructFilePaths()
+        Test: loc/exp/site/sbj/ses/TissueClassify/t1_average_BRAINSABC.nii.gz
+        File not found for file: t2_average
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/TissueClassify/t1_average_BRAINSABC.nii.gz
+        File not found for file: t1_average
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/TissueClassify/fixed_brainlabels_seg.nii.gz
+        File not found for file: labels_tissue
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_caudate_seg.nii.gz
+        File not found for file: caudate_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_caudate_seg.nii.gz
+        File not found for file: caudate_right
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_accumben_seg.nii.gz
+        File not found for file: accumben_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_accumben_seg.nii.gz
+        File not found for file: accumben_right
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_putamen_seg.nii.gz
+        File not found for file: putamen_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_putamen_seg.nii.gz
+        File not found for file: putamen_right
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_globus_seg.nii.gz
+        File not found for file: globus_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_globus_seg.nii.gz
+        File not found for file: globus_right
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_thalamus_seg.nii.gz
+        File not found for file: thalamus_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_thalamus_seg.nii.gz
+        File not found for file: thalamus_right
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/l_hippocampus_seg.nii.gz
+        File not found for file: hippocampus_left
+        Skipping session...
+        Test: loc/exp/site/sbj/ses/DenoisedRFSegmentations/r_hippocampus_seg.nii.gz
+        File not found for file: hippocampus_right
+        Skipping session...
+        """
         row = self.batchRows[self.count]
         sessionFiles = {}
         # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
         baseDirectory = os.path.join(row[5], row[1], row[2], row[3], row[4])
         sessionFiles['session'] = row[4]
         sessionFiles['record_id'] = row[0]
-        tissueDirectory = os.path.join(baseDirectory, 'TissueClassify', 'BABC') # New directory structure 2012-11-26
-        if not os.path.exists(tissueDirectory):
-            tissueDirectory = os.path.join(baseDirectory, 'TissueClassify') # Old directory structure (pre- 2012-11-26)
-        sessionFiles['t1_average'] = os.path.join(tissueDirectory, 't1_average_BRAINSABC.nii.gz')
-        sessionFiles['t2_average'] = os.path.join(tissueDirectory, 't2_average_BRAINSABC.nii.gz')
-        for regionName in self.regions:
-            if regionName == 'labels_tissue':
-                sessionFiles['labels_tissue'] = os.path.join(tissueDirectory, 'brain_label_seg.nii.gz')
-            else:
-                fileName = self._getLabelFileNameFromRegion(regionName)
-                sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName)
-                if not os.path.exists(sessionFiles[regionName]):
-                    sessionFiles[regionName] = os.path.join(baseDirectory, 'Segmentations', fileName.lower())
-                    if not os.path.exists(sessionFiles[regionName]):
-                        sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName)
-                        if not os.path.exists(sessionFiles[regionName]):
-                            sessionFiles[regionName] = os.path.join(baseDirectory, 'BRAINSCut', fileName.lower())
-                            if not os.path.exists(sessionFiles[regionName]):
-                                warn("No output files were found at %s in /Segmentations or /BRAINSCut for region %s. Skipping..." %  (baseDirectory, regionName))
-        self.sessionFiles = sessionFiles
-        # Verify that the files exist
-        for key in self.images + self.regions:
-            if not os.path.exists(self.sessionFiles[key]):
-                print "File not found: %s\nSkipping session..." % self.sessionFiles[key]
-                # raise IOError("File not found!\nFile: %s" % self.sessionFiles[key])
-                self.database.unlockRecord('M', self.sessionFiles['record_id'])
-                self.onGetBatchFilesClicked()
+        for image in self.images + self.regions:
+            sessionFiles[image] = None
+            imageDirs = eval(self.config.get(image, 'directories'))
+            imageFiles = eval(self.config.get(image, 'filenames'))
+            for _dir in imageDirs:
+                for _file in imageFiles:
+                    temp = os.path.join(baseDirectory, _dir, _file)
+                    if os.path.exists(temp):
+                        sessionFiles[image] = temp
+                        break; break
+                    elif self.testing:
+                        print "Test: %s" % temp
+            if sessionFiles[image] is None:
+                print "File not found for file: %s\nSkipping session..." % image
+                # raise IOError("File not found!\nFile: %s" % sessionFiles[key])
+                if not self.testing:
+                    self.database.unlockRecord('M', sessionFiles['record_id'])
+                    self.onGetBatchFilesClicked()
                 # TODO: Generalize for a batch size > 1
                 # for count in range(self.maxCount - self.count):
                 #     print "This is the count: %d" % count
+        self.sessionFiles = sessionFiles
+
 
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
@@ -294,3 +353,7 @@ class DerivedImageQALogic(object):
 
     def exit(self):
         self.database.unlockRecord('U')
+
+# if __name__ == '__main__':
+#     import doctest
+#     doctest.testmod()

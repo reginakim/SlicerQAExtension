@@ -4,7 +4,7 @@
 # Address of host server
 Host=<host.psychiatry.uiowa.edu>
 # Default is 5432
-Port=<four-digit port number>
+Port=5432
 # Name of postgres database
 Database=<Postgres database name>
 # Postgress user name
