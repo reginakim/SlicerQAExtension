@@ -13,7 +13,7 @@ def writeFile():
     dirs = [['TissueClassify']] * 3 + [['DenoisedRFSegmentations']] * (len(images)-3)
     fnames = [['t1_average_BRAINSABC.nii.gz'],
               ['t1_average_BRAINSABC.nii.gz'],
-              ['brain_label_seg.nii.gz']]
+              ['fixed_brainlabels_seg.nii.gz']]
     for label in images[3:]:
         region, side = label.split('_')
         fnames.append(['{SIDE}_{REGION}_seg.nii.gz'.format(SIDE=side[0].lower(),

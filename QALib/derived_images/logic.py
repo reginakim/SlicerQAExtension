@@ -39,7 +39,7 @@ class DerivedImageQALogic(object):
         self.setup()
 
     def setup(self):
-        # self.createColorTable()
+        self.createColorTable()
         config = cParser.SafeConfigParser()
         self.config = cParser.SafeConfigParser()
         logicConfig = os.path.join(__slicer_module__, 'derived_images.cfg')
@@ -236,9 +236,11 @@ class DerivedImageQALogic(object):
                         break; break
                     elif self.testing:
                         print "Test: %s" % temp
+                    else:
+                        print "File not found: %s" % temp
             if sessionFiles[image] is None:
-                print "File not found for file: %s\nSkipping session..." % image
-                # raise IOError("File not found!\nFile: %s" % sessionFiles[key])
+                print "Skipping session %s..." % sessionFiles['session']
+                # raise IOError("File not found!\nFile: %s" % sessionFiles[image])
                 if not self.testing:
                     self.database.unlockRecord('M', sessionFiles['record_id'])
                     self.onGetBatchFilesClicked()
@@ -258,7 +260,10 @@ class DerivedImageQALogic(object):
         t1NodeName = '%s_t1_average' % self.currentSession
         t1VolumeNode = slicer.util.getNode(t1NodeName)
         if t1VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0, None)
+            try:
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0, None)
+            except TypeError:
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0)
             if slicer.util.getNode(t1NodeName) is None:
                 raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['t1_average'])
             t1VolumeNode = slicer.util.getNode(t1NodeName)
@@ -267,7 +272,10 @@ class DerivedImageQALogic(object):
         t2NodeName = '%s_t2_average' % self.currentSession
         t2VolumeNode = slicer.util.getNode(t2NodeName)
         if t2VolumeNode is None:
-            volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0, None)
+            try:
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0, None)
+            except TypeError:
+                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0)
             if slicer.util.getNode(t2NodeName) is None:
                 raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['t2_average'])
             t2VolumeNode = slicer.util.getNode(t2NodeName)
@@ -277,7 +285,10 @@ class DerivedImageQALogic(object):
             regionNodeName = '%s_%s' % (self.currentSession, region)
             regionNode = slicer.util.getNode(regionNodeName)
             if regionNode is None:
-                volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1, None)
+                try:
+                    volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1, None)
+                except TypeError:
+                    volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
                 if slicer.util.getNode(regionNodeName) is None:
                     raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
                 regionNode = slicer.util.getNode(regionNodeName)
