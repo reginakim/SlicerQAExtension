@@ -1,8 +1,8 @@
 import os
 import sys
 
-__slicer_module__ = os.path.sep.join(__path__[0].split(os.path.sep)[0:-1])
-print "Path to module: %s" % __slicer_module__
+__slicer_module__ = os.path.dirname(os.path.abspath(__path__[0]))
+# print "Path to module: %s" % __slicer_module__
 
 try:
     import pg8000

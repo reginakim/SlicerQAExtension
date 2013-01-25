@@ -1,20 +1,18 @@
 #! /usr/bin/env python
-import os
-
-from __main__ import ctk
-from __main__ import qt
-from __main__ import slicer
-from __main__ import vtk
-
-from QALib.derived_images import *
-from QALib.derived_images import __slicer_module__
-
 ### TODO: Add logging
-# try:
+try:
+    import os
+    from QALib.derived_images import *
+    from QALib.derived_images import __slicer_module__
+    print __slicer_module__
+    from __main__ import ctk
+    from __main__ import qt
+    from __main__ import slicer
+    from __main__ import vtk
 #     import logging
 #     import logging.handlers
-# except ImportError:
-#     print "External modules not found!"
+except ImportError:
+    print "External modules not found!"
 #     raise ImportError
 
 class DerivedImageQA:
@@ -29,7 +27,7 @@ class DerivedImageQA:
 
 
 class DerivedImageQAWidget:
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, test=False):
         self.images = ('t2_average', 't1_average') # T1 is second so that reviewers see it as background for regions
         self.regions = ('labels_tissue',
                         'caudate_left', 'caudate_right',
@@ -44,7 +42,7 @@ class DerivedImageQAWidget:
         self.followUpDialog = None
         self.notes = None
         # Handle the UI display with/without Slicer
-        if parent is None:
+        if parent is None and not test:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
@@ -52,10 +50,12 @@ class DerivedImageQAWidget:
             self.logic = DerivedImageQALogic(self)
             self.setup()
             self.parent.show()
-        else:
+        elif not test:
             self.parent = parent
             self.layout = self.parent.layout()
-            self.logic = DerivedImageQALogic(self, test=False)
+            self.logic = DerivedImageQALogic(self, test=test)
+        elif test:
+            self.logic = DerivedImageQALogic(self, test=test)
 
     def setup(self):
         self.followUpDialog = self.loadUIFile('Resources/UI/followUpDialog.ui')
