@@ -12,7 +12,7 @@ def writeFile():
               'hippocampus_left', 'hippocampus_right']
     dirs = [['TissueClassify']] * 3 + [['DenoisedRFSegmentations']] * (len(images)-3)
     fnames = [['t1_average_BRAINSABC.nii.gz'],
-              ['t1_average_BRAINSABC.nii.gz'],
+              ['t2_average_BRAINSABC.nii.gz'],
               ['fixed_brainlabels_seg.nii.gz']]
     for label in images[3:]:
         region, side = label.split('_')
