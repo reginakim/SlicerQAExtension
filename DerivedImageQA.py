@@ -1,16 +1,16 @@
 #! /usr/bin/env python
-### TODO: Add logging
 try:
+    import logging
+    import logging.handlers
     import os
+
     from QALib.derived_images import *
     from QALib.derived_images import __slicer_module__
-    print __slicer_module__
+
     from __main__ import ctk
     from __main__ import qt
     from __main__ import slicer
     from __main__ import vtk
-#     import logging
-#     import logging.handlers
 except ImportError:
     print "External modules not found!"
 #     raise ImportError
@@ -28,6 +28,11 @@ class DerivedImageQA:
 
 class DerivedImageQAWidget:
     def __init__(self, parent=None, test=False):
+        logFile = os.path.join(os.environ['TMPDIR'], __name__ + '.log')
+        logging.basicConfig(filename=logFile,
+                            level=logging.DEBUG,
+                            format='%(module)s.%(funcName)s - %(levelname)s: %(message)s')
+        self.logging = logging.getLogger(__name__)
         self.images = ('t2_average', 't1_average') # T1 is second so that reviewers see it as background for regions
         self.regions = ('labels_tissue',
                         'caudate_left', 'caudate_right',

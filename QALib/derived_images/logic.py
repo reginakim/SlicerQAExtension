@@ -1,4 +1,6 @@
 try:
+    import logging
+    import logging.handlers
     import os
     import ConfigParser as cParser
     from . import __slicer_module__, postgresDatabase
@@ -7,8 +9,6 @@ try:
     from __main__ import qt
     from __main__ import slicer
     from __main__ import vtk
-    # import logging
-    # import logging.handlers
 except ImportError:
     print "External modules not found!"
     # raise ImportError
@@ -18,6 +18,7 @@ class DerivedImageQALogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
     def __init__(self, widget, test=False):
         self.widget = widget
+        self.logging = self.widget.logging
         self.regions = self.widget.regions
         self.images = self.widget.images
         self.qaValueMap = {'good':'1', 'bad':'0', 'follow up':'-1'}
@@ -35,23 +36,25 @@ class DerivedImageQALogic(object):
         self.sessionFiles = {}
         self.testing = test
         if self.testing:
-            print "Testing logic is ON"
+            self.logging.info("TESTING is ON")
         self.setup()
 
     def setup(self):
-        print "setup()"
+        self.logging.debug("call")
         self.createColorTable()
         config = cParser.SafeConfigParser()
         self.config = cParser.SafeConfigParser()
         logicConfig = os.path.join(__slicer_module__, 'derived_images.cfg')
         if self.testing:
-            ### HACK
             databaseConfig = os.path.join(__slicer_module__, 'database.cfg.EXAMPLE')
+            self.logging.info("TESTING: Setting database configuration to %s", databaseConfig)
             self.user_id = 'user1'
-            ### END HACK
+            self.logging.info("TESTING: Setting database user to %s", self.user_id)
         else:
             databaseConfig = os.path.join(__slicer_module__, 'autoworkup.cfg')
+            self.logging.info("Setting database configuration to %s", databaseConfig)
             self.user_id = os.environ['USER']
+            self.logging.info("logic.py: Setting database user to %s", self.user_id)
         for configFile in [databaseConfig, logicConfig]:
             if not os.path.exists(configFile):
                 raise IOError("File {0} not found!".format(configFile))
@@ -69,12 +72,12 @@ class DerivedImageQALogic(object):
                                              self.user_id, self.batchSize)
         ### END HACK
         self.config.read(logicConfig)
+        self.logging.info("logic.py: Reading logic configuration from %s", logicConfig)
 
 
     def createColorTable(self):
-        """
-        """
-        print "createColorTable()"
+        """ """
+        self.logging.debug("call")
         self.colorTableNode = slicer.vtkMRMLColorTableNode()
         self.colorTableNode.SetFileName(os.path.join(__slicer_module__, 'Resources', 'ColorFile', self.colorTable))
         self.colorTableNode.SetName(self.colorTable[:-4])
@@ -86,8 +89,9 @@ class DerivedImageQALogic(object):
         storage.SetReadState(True)
         storage.ReadData(self.colorTableNode, True)
 
+
     def addEntryToColorTable(self, buttonName):
-        print "addEntryToColorTable()"
+        self.logging.debug("call")
         lTable = self.colorTableNode.GetLookupTable()
         colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)
         color = lTable.GetTableValue(colorIndex)
@@ -96,7 +100,7 @@ class DerivedImageQALogic(object):
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene
         """
-        print "selectRegion()"
+        self.logging.debug("call")
         nodeName = self.constructLabelNodeName(buttonName)
         if nodeName == '':
             return -1
@@ -116,19 +120,20 @@ class DerivedImageQALogic(object):
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
-        print "constructLabelNodeName()"
+        self.logging.debug("call")
         if not self.currentSession is None:
             nodeName = '_'.join([self.currentSession, buttonName])
             return nodeName
         return ''
 
     def onCancelButtonClicked(self):
+        self.logging.debug("call")
         # TODO: Populate this function
         #   onNextButtonClicked WITHOUT the write to database
-        print "Cancelled!"
+        self.logging.info("Cancel button clicked!")
 
     def writeToDatabase(self, evaluations):
-        print "writeToDatabase()"
+        self.logging.debug("call")
         if self.testing:
             recordID = str(self.batchRows[self.count]['record_id'])
         else:
@@ -142,11 +147,11 @@ class DerivedImageQALogic(object):
                 self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
-            print "Error writing to database!"
+            self.logging.error("Error writing to database for record %d", recordID)
             raise
 
     def _getLabelFileNameFromRegion(self, regionName):
-        print "_getLabelFileNameFromRegion()"
+        self.logging.debug("call")
         try:
             region, side = regionName.split('_')
             fileName = '_'.join([side[0], region.capitalize(), 'seg.nii.gz'])
@@ -157,7 +162,7 @@ class DerivedImageQALogic(object):
 
     def onGetBatchFilesClicked(self):
         """ """
-        print "onGetBatchFilesClicked()"
+        self.logging.debug("call")
         self.count = 0
         self.batchRows = self.database.lockAndReadRecords()
         self.maxCount = len(self.batchRows)
@@ -167,7 +172,7 @@ class DerivedImageQALogic(object):
 
 
     def setCurrentSession(self):
-        print "setCurrentSession()"
+        self.logging.debug("call")
         self.currentSession = self.sessionFiles['session']
         self.widget.currentSession = self.currentSession
 
@@ -228,7 +233,7 @@ class DerivedImageQALogic(object):
         File not found for file: hippocampus_right
         Skipping session...
         """
-        print "constructFilePaths()"
+        self.logging.debug("call")
         row = self.batchRows[self.count]
         sessionFiles = {}
         # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
@@ -246,24 +251,22 @@ class DerivedImageQALogic(object):
                         sessionFiles[image] = temp
                         break ; break
                     elif self.testing:
-                        print "Test: %s" % temp
+                        self.logging.debug("TESTING: \nimage: %s\nfullPath: %s", image, temp)
                     else:
-                        print "File not found: %s" % temp
+                        self.logging.debug("File not found: %s", temp)
             if sessionFiles[image] is None:
-                print "Skipping session %s..." % sessionFiles['session']
+                self.logging.info("Skipping session %s", sessionFiles['session'])
                 # raise IOError("File not found!\nFile: %s" % sessionFiles[image])
                 if not self.testing:
                     self.database.unlockRecord('M', sessionFiles['record_id'])
-                    print "*" * 50
-                    print "DEBUG: sessionFiles ", sessionFiles
-                    print "DEBUG: image ", image
+                    self.logging.debug("image = %s", image)
                 break
         if None in sessionFiles.values():
-            print "DEBUG: calling onGetBatchFilesClicked()..."
+            self.logging.debug("'None' value in sessionFiles - recursive call initiated")
             self.onGetBatchFilesClicked()
             # TODO: Generalize for a batch size > 1
             # for count in range(self.maxCount - self.count):
-            #     print "This is the count: %d" % count
+            #     self.logging.debug("logic.py:This is the count: %d" % count
         else:
             self.sessionFiles = sessionFiles
 
@@ -271,7 +274,7 @@ class DerivedImageQALogic(object):
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
         """
-        print "loadData()"
+        self.logging.debug("call")
         dataDialog = qt.QPushButton();
         dataDialog.setText('Loading files for session %s...' % self.currentSession);
         dataDialog.show()
@@ -279,28 +282,26 @@ class DerivedImageQALogic(object):
         t1NodeName = '%s_t1_average' % self.currentSession
         t1VolumeNode = slicer.util.getNode(t1NodeName)
         if t1VolumeNode is None:
+            self.logging.debug("%s = %s", 't1_average', self.sessionFiles['t1_average'])
             try:
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0, None)
             except TypeError:
-                print "DEBUG: ", self.sessionFiles['t1_average']
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0)
-                print "DEBUG: done"
             if slicer.util.getNode(t1NodeName) is None:
-                raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['t1_average'])
+                self.logging.error("Could not load session file for T1: %s", self.sessionFiles['t1_average'])
             t1VolumeNode = slicer.util.getNode(t1NodeName)
             t1VolumeNode.CreateDefaultDisplayNodes()
             t1VolumeNode.GetDisplayNode().AutoWindowLevelOn()
         t2NodeName = '%s_t2_average' % self.currentSession
         t2VolumeNode = slicer.util.getNode(t2NodeName)
         if t2VolumeNode is None:
+            self.logging.debug("%s = %s", 't2_average', self.sessionFiles['t2_average'])
             try:
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0, None)
             except TypeError:
-                print "DEBUG: ", self.sessionFiles['t2_average']
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0)
-                print "DEBUG: done"
             if slicer.util.getNode(t2NodeName) is None:
-                raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['t2_average'])
+                self.logging.error("Could not load session file for T2: %s", self.sessionFiles['t2_average'])
             t2VolumeNode = slicer.util.getNode(t2NodeName)
             t2VolumeNode.CreateDefaultDisplayNodes()
             t2VolumeNode.GetDisplayNode().AutoWindowLevelOn()
@@ -308,14 +309,13 @@ class DerivedImageQALogic(object):
             regionNodeName = '%s_%s' % (self.currentSession, region)
             regionNode = slicer.util.getNode(regionNodeName)
             if regionNode is None:
+                self.logging.debug("%s = %s", region, self.sessionFiles[region])
                 try:
                     volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1, None)
                 except TypeError:
-                    print "DEBUG: ", self.sessionFiles[region]
                     volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
-                    print "DEBUG: done"
                 if slicer.util.getNode(regionNodeName) is None:
-                    raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
+                    self.logging.error("Could not load session file for region %s! File: %s", region, self.sessionFiles[region])
                 regionNode = slicer.util.getNode(regionNodeName)
                 displayNode = slicer.vtkMRMLLabelMapVolumeDisplayNode()
                 slicer.mrmlScene.AddNode(displayNode)
@@ -324,7 +324,7 @@ class DerivedImageQALogic(object):
 
     def loadBackgroundNodeToMRMLScene(self, volumeNode):
         # Set up template scene
-        print "loadBackgroundNodeToMRMLScene()"
+        self.logging.debug("call")
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
         for compositeNode in compositeNodes.values():
             try:
@@ -336,7 +336,7 @@ class DerivedImageQALogic(object):
 
     def getEvaluationValues(self):
         """ Get the evaluation values from the widget """
-        print "getEvaluationValues()"
+        self.logging.debug("call")
         values = ()
         for region in self.regions:
             goodButton, badButton = self.widget._findRadioButtons(region)
@@ -350,7 +350,7 @@ class DerivedImageQALogic(object):
 
     def onNextButtonClicked(self):
         """ Capture the evaluation values, write them to the database, reset the widgets, then load the next dataset """
-        print "onNextButtonClicked()"
+        self.logging.debug("call")
         try:
             evaluations = self.getEvaluationValues()
         except:
@@ -360,7 +360,7 @@ class DerivedImageQALogic(object):
         try:
             self.writeToDatabase(values)
         except sqlite3.OperationalError:
-            print "Error here"
+            self.logging.error("SQL Error")
         count = self.count + 1
         if count <= self.maxCount - 1:
             self.count = count
@@ -370,7 +370,7 @@ class DerivedImageQALogic(object):
         self.widget.resetWidget()
 
     def onPreviousButtonClicked(self):
-        print "onPreviousButtonClicked()"
+        self.logging.debug("call")
         try:
             evaluations = self.getEvaluationValues()
         except:
@@ -387,13 +387,13 @@ class DerivedImageQALogic(object):
         self.widget.resetWidget()
 
     def loadNewSession(self):
-        print "loadNewSession()"
+        self.logging.debug("call")
         self.constructFilePaths()
         self.setCurrentSession()
         self.loadData()
 
     def exit(self):
-        print "exit()"
+        self.logging.debug("call")
         self.database.unlockRecord('U')
 
 # if __name__ == '__main__':
