@@ -102,6 +102,7 @@ class DerivedImageQAWidget:
         self.layout.addStretch(1)
         ### TESTING ###
         if True:
+            print "Gui calling logic.onGetBatchFilesClicked()"
             self.logic.onGetBatchFilesClicked()
         ### END ###
 
@@ -225,6 +226,7 @@ class DerivedImageQAWidget:
         pass
 
     def onGetBatchFilesClicked(self):
+        print "gui:onGetBatchFilesClicked()"
         values = self.getRadioValues()
         if len(values) >= len(self.images + self.regions):
             self.logic.writeToDatabase(values)

@@ -39,6 +39,7 @@ class DerivedImageQALogic(object):
         self.setup()
 
     def setup(self):
+        print "setup()"
         self.createColorTable()
         config = cParser.SafeConfigParser()
         self.config = cParser.SafeConfigParser()
@@ -73,6 +74,7 @@ class DerivedImageQALogic(object):
     def createColorTable(self):
         """
         """
+        print "createColorTable()"
         self.colorTableNode = slicer.vtkMRMLColorTableNode()
         self.colorTableNode.SetFileName(os.path.join(__slicer_module__, 'Resources', 'ColorFile', self.colorTable))
         self.colorTableNode.SetName(self.colorTable[:-4])
@@ -85,6 +87,7 @@ class DerivedImageQALogic(object):
         storage.ReadData(self.colorTableNode, True)
 
     def addEntryToColorTable(self, buttonName):
+        print "addEntryToColorTable()"
         lTable = self.colorTableNode.GetLookupTable()
         colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)
         color = lTable.GetTableValue(colorIndex)
@@ -93,6 +96,7 @@ class DerivedImageQALogic(object):
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene
         """
+        print "selectRegion()"
         nodeName = self.constructLabelNodeName(buttonName)
         if nodeName == '':
             return -1
@@ -112,7 +116,8 @@ class DerivedImageQALogic(object):
 
     def constructLabelNodeName(self, buttonName):
         """ Create the names for the volume and label nodes """
-	if not self.currentSession is None:
+        print "constructLabelNodeName()"
+        if not self.currentSession is None:
             nodeName = '_'.join([self.currentSession, buttonName])
             return nodeName
         return ''
@@ -123,6 +128,7 @@ class DerivedImageQALogic(object):
         print "Cancelled!"
 
     def writeToDatabase(self, evaluations):
+        print "writeToDatabase()"
         if self.testing:
             recordID = str(self.batchRows[self.count]['record_id'])
         else:
@@ -140,6 +146,7 @@ class DerivedImageQALogic(object):
             raise
 
     def _getLabelFileNameFromRegion(self, regionName):
+        print "_getLabelFileNameFromRegion()"
         try:
             region, side = regionName.split('_')
             fileName = '_'.join([side[0], region.capitalize(), 'seg.nii.gz'])
@@ -150,6 +157,7 @@ class DerivedImageQALogic(object):
 
     def onGetBatchFilesClicked(self):
         """ """
+        print "onGetBatchFilesClicked()"
         self.count = 0
         self.batchRows = self.database.lockAndReadRecords()
         self.maxCount = len(self.batchRows)
@@ -157,7 +165,9 @@ class DerivedImageQALogic(object):
         self.setCurrentSession()
         self.loadData()
 
+
     def setCurrentSession(self):
+        print "setCurrentSession()"
         self.currentSession = self.sessionFiles['session']
         self.widget.currentSession = self.currentSession
 
@@ -218,6 +228,7 @@ class DerivedImageQALogic(object):
         File not found for file: hippocampus_right
         Skipping session...
         """
+        print "constructFilePaths()"
         row = self.batchRows[self.count]
         sessionFiles = {}
         # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
@@ -233,7 +244,7 @@ class DerivedImageQALogic(object):
                     temp = os.path.join(baseDirectory, _dir, _file)
                     if os.path.exists(temp):
                         sessionFiles[image] = temp
-                        break; break
+                        break ; break
                     elif self.testing:
                         print "Test: %s" % temp
                     else:
@@ -243,16 +254,24 @@ class DerivedImageQALogic(object):
                 # raise IOError("File not found!\nFile: %s" % sessionFiles[image])
                 if not self.testing:
                     self.database.unlockRecord('M', sessionFiles['record_id'])
-                    self.onGetBatchFilesClicked()
-                # TODO: Generalize for a batch size > 1
-                # for count in range(self.maxCount - self.count):
-                #     print "This is the count: %d" % count
-        self.sessionFiles = sessionFiles
+                    print "*" * 50
+                    print "DEBUG: sessionFiles ", sessionFiles
+                    print "DEBUG: image ", image
+                break
+        if None in sessionFiles.values():
+            print "DEBUG: calling onGetBatchFilesClicked()..."
+            self.onGetBatchFilesClicked()
+            # TODO: Generalize for a batch size > 1
+            # for count in range(self.maxCount - self.count):
+            #     print "This is the count: %d" % count
+        else:
+            self.sessionFiles = sessionFiles
 
 
     def loadData(self):
         """ Load some default data for development and set up a viewing scenario for it.
         """
+        print "loadData()"
         dataDialog = qt.QPushButton();
         dataDialog.setText('Loading files for session %s...' % self.currentSession);
         dataDialog.show()
@@ -263,7 +282,9 @@ class DerivedImageQALogic(object):
             try:
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0, None)
             except TypeError:
+                print "DEBUG: ", self.sessionFiles['t1_average']
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t1_average'], t1NodeName, 0)
+                print "DEBUG: done"
             if slicer.util.getNode(t1NodeName) is None:
                 raise IOError("Could not load session file for T1! File: %s" % self.sessionFiles['t1_average'])
             t1VolumeNode = slicer.util.getNode(t1NodeName)
@@ -275,7 +296,9 @@ class DerivedImageQALogic(object):
             try:
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0, None)
             except TypeError:
+                print "DEBUG: ", self.sessionFiles['t2_average']
                 volumeLogic.AddArchetypeScalarVolume(self.sessionFiles['t2_average'], t2NodeName, 0)
+                print "DEBUG: done"
             if slicer.util.getNode(t2NodeName) is None:
                 raise IOError("Could not load session file for T2! File: %s" % self.sessionFiles['t2_average'])
             t2VolumeNode = slicer.util.getNode(t2NodeName)
@@ -288,7 +311,9 @@ class DerivedImageQALogic(object):
                 try:
                     volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1, None)
                 except TypeError:
+                    print "DEBUG: ", self.sessionFiles[region]
                     volumeLogic.AddArchetypeScalarVolume(self.sessionFiles[region], regionNodeName, 1)
+                    print "DEBUG: done"
                 if slicer.util.getNode(regionNodeName) is None:
                     raise IOError("Could not load session file for region %s! File: %s" % (region, self.sessionFiles[region]))
                 regionNode = slicer.util.getNode(regionNodeName)
@@ -299,6 +324,7 @@ class DerivedImageQALogic(object):
 
     def loadBackgroundNodeToMRMLScene(self, volumeNode):
         # Set up template scene
+        print "loadBackgroundNodeToMRMLScene()"
         compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
         for compositeNode in compositeNodes.values():
             try:
@@ -310,6 +336,7 @@ class DerivedImageQALogic(object):
 
     def getEvaluationValues(self):
         """ Get the evaluation values from the widget """
+        print "getEvaluationValues()"
         values = ()
         for region in self.regions:
             goodButton, badButton = self.widget._findRadioButtons(region)
@@ -323,6 +350,7 @@ class DerivedImageQALogic(object):
 
     def onNextButtonClicked(self):
         """ Capture the evaluation values, write them to the database, reset the widgets, then load the next dataset """
+        print "onNextButtonClicked()"
         try:
             evaluations = self.getEvaluationValues()
         except:
@@ -342,6 +370,7 @@ class DerivedImageQALogic(object):
         self.widget.resetWidget()
 
     def onPreviousButtonClicked(self):
+        print "onPreviousButtonClicked()"
         try:
             evaluations = self.getEvaluationValues()
         except:
@@ -358,11 +387,13 @@ class DerivedImageQALogic(object):
         self.widget.resetWidget()
 
     def loadNewSession(self):
+        print "loadNewSession()"
         self.constructFilePaths()
         self.setCurrentSession()
         self.loadData()
 
     def exit(self):
+        print "exit()"
         self.database.unlockRecord('U')
 
 # if __name__ == '__main__':
