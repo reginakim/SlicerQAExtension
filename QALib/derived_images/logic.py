@@ -41,7 +41,7 @@ class DerivedImageQALogic(object):
 
     def setup(self):
         self.logging.debug("call")
-        self.createColorTable()
+        # self.createColorTable()
         config = cParser.SafeConfigParser()
         self.config = cParser.SafeConfigParser()
         logicConfig = os.path.join(__slicer_module__, 'derived_images.cfg')
@@ -69,7 +69,7 @@ class DerivedImageQALogic(object):
         ### HACK
         if not self.testing:
             self.database = postgresDatabase(host, port, db_user, database, password,
-                                             self.user_id, self.batchSize)
+                                             self.user_id, self.batchSize, logging=self.logging)
         ### END HACK
         self.config.read(logicConfig)
         self.logging.info("logic.py: Reading logic configuration from %s", logicConfig)
