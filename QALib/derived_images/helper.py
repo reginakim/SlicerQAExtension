@@ -1,8 +1,11 @@
 #!/usr/bin/env python
+import logging
+import logging.handlers
 import os
 import warnings
 
 from . import pg8000, sql
+# from logic import DerivedImageQALogic as diqal
 
 class sqliteDatabase(object):
     """ Connect to the SQLite database and prevent multiple user collisions
@@ -173,19 +176,18 @@ class postgresDatabase(object):
         self.password = 'postgres'
         self.login = os.environ['USER']
         self.arraySize = 1
-        # Set keyword inputs
-        if not kwds is None:
-            argkeys = ['host', 'port', 'pguser', 'database', 'password', 'login', 'arraySize']
-            keys = sorted(kwds.keys())
-            for key in keys:
-                argkeys.remove(key)
-                value = kwds[key]
-                setattr(self, key, value)
-        if len(argkeys) == len(args) and len(args) > 0:
-                for key, arg in zip(argkeys, args):
-                    setattr(self, key, arg)
+        # Set inputs
+        keys = ['host', 'port', 'pguser', 'database', 'password', 'login', 'arraySize', 'logging']
+        keys.reverse()
+        args = list(args)
+        for key in keys:
+            value = kwds.pop(key, None)
+            if value is None:
+                value = args.pop()
+            self.__setattr__(key, value)
         # Set the database default
         if self.database is None: self.database = self.pguser
+
 
     def openDatabase(self):
         """ Open the database and create cursor and connection
@@ -197,6 +199,7 @@ class postgresDatabase(object):
         >>> isinstance(db.cursor, sql.DBAPI.CursorWrapper)
         True
         """
+        self.logging.debug("call")
         self.connection = sql.connect(host=self.host,
                                       port=self.port,
                                       database=self.database,
@@ -208,6 +211,7 @@ class postgresDatabase(object):
     def closeDatabase(self):
         """ Close cursor and connection, setting values to None
         """
+        self.logging.debug("call")
         self.cursor.close()
         self.cursor = None
         self.connection.close()
@@ -225,6 +229,7 @@ class postgresDatabase(object):
             ...
         DataError: Reviewer user0 is not registered in the database test!
         """
+        self.logging.debug("call")
         self.openDatabase()
         self.cursor.execute("SELECT reviewer_id FROM reviewers \
                              WHERE login=?", (self.login,))
@@ -247,6 +252,7 @@ class postgresDatabase(object):
         >>> self.rows is None
         True
         """
+        self.logging.debug("call")
         self.cursor.execute("SELECT * \
                             FROM derived_images \
                             WHERE status = 'U' \
@@ -258,6 +264,7 @@ class postgresDatabase(object):
     def lockBatch(self):
         """ Set the status of all batch members to 'L'
         """
+        self.logging.debug("call")
         ids = ()
         idString = ""
         for row in self.rows:
@@ -274,6 +281,7 @@ class postgresDatabase(object):
         """ Find a given number of records with status == 'U', set the status to 'L',
             and return the records in a dictionary-like object
         """
+        self.logging.debug("call")
         self.openDatabase()
         try:
             self.getBatch()
@@ -288,6 +296,7 @@ class postgresDatabase(object):
         Arguments:
         - `values`:
         """
+        self.logging.debug("call")
         self.getReviewerID()
         self.openDatabase()
         try:
@@ -315,6 +324,7 @@ class postgresDatabase(object):
                   If pKey > -1, set that record's flag to 'R'.
                   If pKey is None, then set the remaining, unreviewed rows to 'U'
         """
+        self.logging.debug("call")
         self.openDatabase()
         try:
             if not pKey is None:
