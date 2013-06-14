@@ -53,11 +53,10 @@ class DWIRawQALogic(object):
         """
         config = cParser.SafeConfigParser()
         if self.testing:
-            configFile = os.path.join(__slicer_module__, 'test.cfg')
-            self.user_id = 'user1'
+            self.user_id = 'testuser1'
         else:
-            configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
             self.user_id = os.environ['USER']
+        configFile = os.path.join(__slicer_module__, 'autoworkup.cfg')
         if not os.path.exists(configFile):
             raise IOError("File {0} not found!".format(configFile))
         config.read(configFile)
