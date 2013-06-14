@@ -16,7 +16,7 @@ except ImportError:
 
 class DerivedImageQALogic(object):
     """ Logic class to be used 'under the hood' of the evaluator """
-    def __init__(self, widget, test=False):
+    def __init__(self, widget, test=True):
         self.widget = widget
         self.logging = self.widget.logging
         self.regions = self.widget.regions
@@ -46,9 +46,9 @@ class DerivedImageQALogic(object):
         self.config = cParser.SafeConfigParser()
         logicConfig = os.path.join(__slicer_module__, 'derived_images.cfg')
         if self.testing:
-            databaseConfig = os.path.join(__slicer_module__, 'database.cfg.EXAMPLE')
+            databaseConfig = os.path.join(__slicer_module__, 'testdatabase.cfg')
             self.logging.info("TESTING: Setting database configuration to %s", databaseConfig)
-            self.user_id = 'user1'
+            self.user_id = 'test'
             self.logging.info("TESTING: Setting database user to %s", self.user_id)
         else:
             databaseConfig = os.path.join(__slicer_module__, 'autoworkup.cfg')
@@ -63,39 +63,18 @@ class DerivedImageQALogic(object):
         port = config.getint('Postgres', 'Port')
         database = config.get('Postgres', 'Database')
         db_user = config.get('Postgres', 'User')
-        password = config.get('Postgres', 'Password') ### TODO: Use secure password handling (see RunSynchronization.py in phdxnat project)
-        #        import hashlib as md5
-        #        md5Password = md5.new(password)
-        ### HACK
-        if not self.testing:
-            self.database = postgresDatabase(host, port, db_user, database, password,
-                                             self.user_id, self.batchSize, logging=self.logging)
-        ### END HACK
+        if self.testing:
+            password = 'test'
+        else:
+            import keyring
+            password = keyring.get_password()
+        self.database = postgresDatabase(host, port, db_user, database, password,
+                                         self.user_id, self.batchSize, logging=self.logging,
+                                         dataTable=config.get('Postgres', 'DataTable'), 
+                                         reviewTable=config.get('Postgres', 'ReviewTable'))
         self.config.read(logicConfig)
         self.logging.info("logic.py: Reading logic configuration from %s", logicConfig)
 
-
-    def createColorTable(self):
-        """ """
-        self.logging.debug("call")
-        self.colorTableNode = slicer.vtkMRMLColorTableNode()
-        self.colorTableNode.SetFileName(os.path.join(__slicer_module__, 'Resources', 'ColorFile', self.colorTable))
-        self.colorTableNode.SetName(self.colorTable[:-4])
-        storage = self.colorTableNode.CreateDefaultStorageNode()
-        slicer.mrmlScene.AddNode(storage)
-        self.colorTableNode.AddAndObserveStorageNodeID(storage.GetID())
-        slicer.mrmlScene.AddNode(self.colorTableNode)
-        storage.SetFileName(self.colorTableNode.GetFileName())
-        storage.SetReadState(True)
-        storage.ReadData(self.colorTableNode, True)
-
-
-    def addEntryToColorTable(self, buttonName):
-        self.logging.debug("call")
-        lTable = self.colorTableNode.GetLookupTable()
-        colorIndex = self.colorTableNode.GetColorIndexByName(buttonName)
-        color = lTable.GetTableValue(colorIndex)
-        self.colorTableNode.AddColor(buttonName, *color)
 
     def selectRegion(self, buttonName):
         """ Load the outline of the selected region into the scene
@@ -106,7 +85,7 @@ class DerivedImageQALogic(object):
             return -1
         labelNode = slicer.util.getNode(nodeName)
         if labelNode.GetLabelMap():
-            labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
+            #labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
@@ -237,9 +216,12 @@ class DerivedImageQALogic(object):
         row = self.batchRows[self.count]
         sessionFiles = {}
         # Due to a poor choice in our database creation, the 'location' column is the 6th, NOT the 2nd
-        baseDirectory = os.path.join(row[5], row[1], row[4]) 
-        sessionFiles['session'] = row[4]
+
+        sessionFiles['session'] = row[2]
         sessionFiles['record_id'] = row[0]
+
+        baseDirectory = os.path.join(row[3], row[1], sessionFiles['session']) 
+        self.logging.debug( "THIS IS BASEDIRECTORY:::" + baseDirectory )
         for image in self.images + self.regions:
             sessionFiles[image] = None
             imageDirs = eval(self.config.get(image, 'directories'))

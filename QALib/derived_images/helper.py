@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import logging
+import logging.handlers
 import os
 import warnings
 
@@ -134,6 +136,8 @@ class postgresDatabase(object):
         - `password`: The password associated with the `user` on the Postgres server, default is 'postgres'
         - `login`: The reviewer login ID, normally $USER
         - `arraySize`: The number of rows to return
+        - `dataTable`: the data table
+        - `reviewTable`: the review table
         ------------------------
         >>> import os
         >>> db = postgresDatabase()
@@ -173,17 +177,15 @@ class postgresDatabase(object):
         self.password = 'postgres'
         self.login = os.environ['USER']
         self.arraySize = 1
-        # Set keyword inputs
-        if not kwds is None:
-            argkeys = ['host', 'port', 'pguser', 'database', 'password', 'login', 'arraySize']
-            keys = sorted(kwds.keys())
-            for key in keys:
-                argkeys.remove(key)
-                value = kwds[key]
-                setattr(self, key, value)
-        if len(argkeys) == len(args) and len(args) > 0:
-                for key, arg in zip(argkeys, args):
-                    setattr(self, key, arg)
+        # Set inputs
+        keys = ['host', 'port', 'pguser', 'database', 'password', 'login', 'arraySize', 'logging', 'dataTable', 'reviewTable']
+        keys.reverse()
+        args = list(args)
+        for key in keys:
+            value = kwds.pop(key, None)
+            if value is None:
+                value = args.pop()
+            self.__setattr__(key, value)
         # Set the database default
         if self.database is None: self.database = self.pguser
 
@@ -197,6 +199,7 @@ class postgresDatabase(object):
         >>> isinstance(db.cursor, sql.DBAPI.CursorWrapper)
         True
         """
+        self.logging.debug("call")
         self.connection = sql.connect(host=self.host,
                                       port=self.port,
                                       database=self.database,
@@ -208,6 +211,7 @@ class postgresDatabase(object):
     def closeDatabase(self):
         """ Close cursor and connection, setting values to None
         """
+        self.logging.debug("call")
         self.cursor.close()
         self.cursor = None
         self.connection.close()
@@ -225,6 +229,7 @@ class postgresDatabase(object):
             ...
         DataError: Reviewer user0 is not registered in the database test!
         """
+        self.logging.debug("call")
         self.openDatabase()
         self.cursor.execute("SELECT reviewer_id FROM reviewers \
                              WHERE login=?", (self.login,))
@@ -247,10 +252,16 @@ class postgresDatabase(object):
         >>> self.rows is None
         True
         """
-        self.cursor.execute("SELECT * \
-                            FROM derived_images \
-                            WHERE status = 'U' \
-                            ORDER BY priority")
+        self.logging.debug("call")
+        self.logging.debug( self.dataTable )
+
+        mycmd = "SELECT * FROM " + self.dataTable + " WHERE status = 'U' ORDER BY priority" 
+        self.logging.debug( mycmd )
+        self.cursor.execute( mycmd )
+        ### HACKED
+        #self.cursor.execute("SELECT * FROM ? WHERE status = 'U' ORDER BY priority", 
+        #                    (self.dataTable,))
+        ### END HACKED
         self.rows = self.cursor.fetchmany()
         if not self.rows:
             raise pg8000.errors.DataError("No rows were status == 'U' were found!")
@@ -258,15 +269,16 @@ class postgresDatabase(object):
     def lockBatch(self):
         """ Set the status of all batch members to 'L'
         """
+        self.logging.debug("call")
         ids = ()
         idString = ""
         for row in self.rows:
             record_id = row[0]
             ids = ids + (record_id,)
         idString = ("?, " * self.arraySize)[:-2]
-        sqlCommand = "UPDATE derived_images \
+        sqlCommand = "UPDATE {dataTable} \
                       SET status='L' \
-                      WHERE record_id IN ({0})".format(idString)
+                      WHERE record_id IN ({idString})".format(dataTable=self.dataTable, idString=idString)
         self.cursor.execute(sqlCommand, ids)
         self.connection.commit()
 
@@ -274,6 +286,7 @@ class postgresDatabase(object):
         """ Find a given number of records with status == 'U', set the status to 'L',
             and return the records in a dictionary-like object
         """
+        self.logging.debug("call")
         self.openDatabase()
         try:
             self.getBatch()
@@ -288,12 +301,13 @@ class postgresDatabase(object):
         Arguments:
         - `values`:
         """
+        self.logging.debug("call")
         self.getReviewerID()
         self.openDatabase()
         try:
             valueString = ("?, " * (len(values) + 1))[:-2]
-            sqlCommand = "INSERT INTO freesurfer_scanRescan_Reviews \
-                            (record_id, t1_average, \
+            sqlCommand = "INSERT INTO {reviewTable}".format(self.reviewTable) + \
+                         "  (record_id, t1_average, \
                             caudate_left, caudate_right, \
                             accumben_left, accumben_right, putamen_left, \
                             putamen_right, globus_left, globus_right, \
@@ -315,19 +329,20 @@ class postgresDatabase(object):
                   If pKey > -1, set that record's flag to 'R'.
                   If pKey is None, then set the remaining, unreviewed rows to 'U'
         """
+        self.logging.debug("call")
         self.openDatabase()
         try:
             if not pKey is None:
-                self.cursor.execute("UPDATE derived_images SET status=? \
-                                     WHERE record_id=? AND status='L'", (status, pKey))
+                self.cursor.execute("UPDATE ? SET status=? \
+                                     WHERE record_id=? AND status='L'", (self.dataTable, status, pKey))
                 self.connection.commit()
             else:
                 for row in self.rows:
-                    self.cursor.execute("SELECT status FROM derived_images WHERE record_id=?", (int(row[0]),))
+                    self.cursor.execute("SELECT status FROM ? WHERE record_id=?", (self.dataTable, int(row[0])))
                     currentStatus = self.cursor.fetchone()
                     if currentStatus[0] == 'L':
-                        self.cursor.execute("UPDATE derived_images SET status='U' \
-                                             WHERE record_id=? AND status='L'", (int(row[0]),))
+                        self.cursor.execute("UPDATE ? SET status='U' \
+                                             WHERE record_id=? AND status='L'", (self.dataTable, int(row[0])))
                         self.connection.commit()
         except:
             raise

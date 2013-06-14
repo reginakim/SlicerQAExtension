@@ -27,7 +27,7 @@ class DerivedImageQA:
 
 
 class DerivedImageQAWidget:
-    def __init__(self, parent=None, test=False):
+    def __init__(self, parent=None, test=True):
         logFile = os.path.join(os.environ['TMPDIR'], "DerivedImageQAWidget" + '.log')
         logging.basicConfig(filename=logFile,
                             level=logging.DEBUG,
@@ -47,7 +47,8 @@ class DerivedImageQAWidget:
         self.followUpDialog = None
         self.notes = None
         # Handle the UI display with/without Slicer
-        if parent is None and not test:
+        ### HACK
+        if parent is None: ###and not test:
             self.parent = slicer.qMRMLWidget()
             self.parent.setLayout(qt.QVBoxLayout())
             self.parent.setMRMLScene(slicer.mrmlScene)
@@ -55,12 +56,13 @@ class DerivedImageQAWidget:
             self.logic = DerivedImageQALogic(self)
             self.setup()
             self.parent.show()
-        elif not test:
+        else: ###elif not test:
             self.parent = parent
             self.layout = self.parent.layout()
             self.logic = DerivedImageQALogic(self, test=test)
-        elif test:
-            self.logic = DerivedImageQALogic(self, test=test)
+        ###elif test:
+        ###    self.logic = DerivedImageQALogic(self, test=test)
+        ### END HACK
 
     def setup(self):
         self.logging.debug("call")
