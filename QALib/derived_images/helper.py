@@ -292,9 +292,9 @@ class postgresDatabase(object):
         self.openDatabase()
         try:
             valueString = ("?, " * (len(values) + 1))[:-2]
-            sqlCommand = "INSERT INTO image_reviews \
-                            (record_id, t2_average, t1_average, \
-                            labels_tissue, caudate_left, caudate_right, \
+            sqlCommand = "INSERT INTO freesurfer_scanRescan_Reviews \
+                            (record_id, t1_average, \
+                            caudate_left, caudate_right, \
                             accumben_left, accumben_right, putamen_left, \
                             putamen_right, globus_left, globus_right, \
                             thalamus_left, thalamus_right, hippocampus_left, \
