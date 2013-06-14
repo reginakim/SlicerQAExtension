@@ -85,7 +85,8 @@ class DerivedImageQALogic(object):
             return -1
         labelNode = slicer.util.getNode(nodeName)
         if labelNode.GetLabelMap():
-            #labelNode.GetDisplayNode().SetAndObserveColorNodeID(self.colorTableNode.GetID())
+            colorTableNode = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLColorTableNode', 'Labels').GetItemAsObject(0)
+            labelNode.GetDisplayNode().SetAndObserveColorNodeID(colorTableNode.GetID())
             compositeNodes = slicer.util.getNodes('vtkMRMLSliceCompositeNode*')
             for compositeNode in compositeNodes.values():
                 compositeNode.SetLabelVolumeID(labelNode.GetID())
