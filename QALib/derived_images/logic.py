@@ -115,19 +115,27 @@ class DerivedImageQALogic(object):
     def writeToDatabase(self, evaluations):
         self.logging.debug("call")
         if self.testing:
-            recordID = str(self.batchRows[self.count]['record_id'])
+            print self.batchRows
+            print self.batchRows[self.count]
+            print self.count
+            print "^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+            recordID = self.batchRows[self.count][0]
+            print( "recordID = " + str(recordID) )
+            #recordID = str(self.batchRows[self.count]['record_id'])
         else:
             recordID = self.batchRows[self.count][0]
         values = (recordID,) + evaluations
         try:
             if self.testing:
-                self.database.writeAndUnlockRecord(values)
+                self.database.writeReview(values)
+                self.database.unlockRecord('R', recordID)
+                #self.database.writeAndUnlockRecord(values)
             else:
                 self.database.writeReview(values)
                 self.database.unlockRecord('R', recordID)
         except:
             # TODO: Prompt user with popup
-            self.logging.error("Error writing to database for record %d", recordID)
+            self.logging.error("Error writing to database for record %s", recordID)
             raise
 
     def _getLabelFileNameFromRegion(self, regionName):

@@ -306,7 +306,9 @@ class postgresDatabase(object):
         self.openDatabase()
         try:
             valueString = ("?, " * (len(values) + 1))[:-2]
-            sqlCommand = "INSERT INTO {reviewTable}".format(self.reviewTable) + \
+            print "valueString = " + valueString
+            print ( "reviewTable:::::" + self.reviewTable )
+            sqlCommand = "INSERT INTO {reviewTable}".format(reviewTable=self.reviewTable) + \
                          "  (record_id, t1_average, \
                             caudate_left, caudate_right, \
                             accumben_left, accumben_right, putamen_left, \
