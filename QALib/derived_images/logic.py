@@ -65,9 +65,11 @@ class DerivedImageQALogic(object):
         db_user = config.get('Postgres', 'User')
         if self.testing:
             password = 'test'
+            import keyring
+            password = keyring.get_password(database, db_user )
         else:
             import keyring
-            password = keyring.get_password()
+            password = keyring.get_password( database, db_user)
         self.database = postgresDatabase(host, port, db_user, database, password,
                                          self.user_id, self.batchSize, logging=self.logging,
                                          dataTable=config.get('Postgres', 'DataTable'), 
