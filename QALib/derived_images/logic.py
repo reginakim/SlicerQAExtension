@@ -248,9 +248,9 @@ class DerivedImageQALogic(object):
             if sessionFiles[image] is None:
                 self.logging.info("Skipping session %s", sessionFiles['session'])
                 # raise IOError("File not found!\nFile: %s" % sessionFiles[image])
-                if not self.testing:
-                    self.database.unlockRecord('M', sessionFiles['record_id'])
-                    self.logging.debug("image = %s", image)
+                #if not self.testing:
+                self.database.unlockRecord('M', sessionFiles['record_id'])
+                self.logging.debug("image = %s", image)
                 break
         if None in sessionFiles.values():
             self.logging.debug("'None' value in sessionFiles - recursive call initiated")

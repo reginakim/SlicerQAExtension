@@ -335,15 +335,20 @@ class postgresDatabase(object):
         self.openDatabase()
         try:
             if not pKey is None:
-                self.cursor.execute("UPDATE ? SET status=? \
-                                     WHERE record_id=? AND status='L'", (self.dataTable, status, pKey))
+                print( "::self.dataTable = " +self.dataTable +
+                     "::status = " + status +
+                     "::pKey = {0}".format(pKey) )
+                PLEASE_Work_Cmd = "UPDATE {0} SET status='{1}' WHERE record_id={2} AND status='L'".format(self.dataTable, status, pKey)
+                print "PLEASE_Work_Cmd == " + PLEASE_Work_Cmd
+                self.cursor.execute( PLEASE_Work_Cmd )
+                #self.cursor.execute("UPDATE ? SET status=? WHERE record_id=? AND status='L'", (self.dataTable, status, pKey))
                 self.connection.commit()
             else:
                 for row in self.rows:
                     self.cursor.execute("SELECT status FROM ? WHERE record_id=?", (self.dataTable, int(row[0])))
                     currentStatus = self.cursor.fetchone()
                     if currentStatus[0] == 'L':
-                        self.cursor.execute("UPDATE ? SET status='U' \
+                        self.cursor.execute("UPDATE ? SET status='M' \
                                              WHERE record_id=? AND status='L'", (self.dataTable, int(row[0])))
                         self.connection.commit()
         except:
